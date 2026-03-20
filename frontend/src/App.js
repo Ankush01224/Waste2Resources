@@ -748,9 +748,12 @@ const Marketplace = () => {
       {listing.images.length > 0 ? (
         <div className="relative h-52 w-full overflow-hidden">
           <img 
-            src={`${API}/files/${listing.images[0]}?auth=${localStorage.getItem("token")}`} 
+            src={listing.images[0]} 
             alt={listing.title} 
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+            onError={(e) => {
+              e.target.src = 'https://images.pexels.com/photos/3735218/pexels-photo-3735218.jpeg';
+            }}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent" />
           <Badge className="absolute top-4 right-4 ai-glow" variant={listing.status === "available" ? "default" : "secondary"}>
@@ -780,13 +783,6 @@ const Marketplace = () => {
           <div className="text-right">
             {listing.price_inr && (
               <div className="text-2xl font-black font-heading gradient-text">₹{listing.price_inr.toLocaleString('en-IN')}</div>
-            )}
-            <div className="text-sm text-foreground/50">${listing.price_usd}</div>
-            {listing.price_eth && (
-              <div className="text-xs text-foreground/40 flex items-center gap-1 justify-end mt-1">
-                <Wallet className="w-3 h-3" />
-                {listing.price_eth} ETH
-              </div>
             )}
           </div>
         </div>
@@ -1290,19 +1286,25 @@ const ListingDetail = () => {
             {listing.images.length > 0 ? (
               <>
                 <img 
-                  src={`${API}/files/${listing.images[0]}?auth=${localStorage.getItem("token")}`} 
+                  src={listing.images[0]} 
                   alt={listing.title} 
                   className="w-full h-96 object-cover rounded-lg shadow-xl border-2"
                   data-testid="listing-detail-image"
+                  onError={(e) => {
+                    e.target.src = 'https://images.pexels.com/photos/3735218/pexels-photo-3735218.jpeg';
+                  }}
                 />
                 {listing.images.length > 1 && (
                   <div className="grid grid-cols-4 gap-2">
                     {listing.images.slice(1).map((img, idx) => (
                       <img 
                         key={idx}
-                        src={`${API}/files/${img}?auth=${localStorage.getItem("token")}`} 
+                        src={img} 
                         alt={`${listing.title} ${idx + 2}`} 
                         className="w-full h-24 object-cover rounded border-2 cursor-pointer hover:border-primary transition-colors"
+                        onError={(e) => {
+                          e.target.src = 'https://images.pexels.com/photos/3735218/pexels-photo-3735218.jpeg';
+                        }}
                       />
                     ))}
                   </div>
@@ -1327,13 +1329,6 @@ const ListingDetail = () => {
               <div className="flex items-baseline gap-3 mb-4">
                 {listing.price_inr && (
                   <span className="text-5xl font-black font-heading gradient-text">₹{listing.price_inr.toLocaleString('en-IN')}</span>
-                )}
-                <span className="text-xl text-foreground/60">${listing.price_usd}</span>
-                {listing.price_eth && (
-                  <span className="text-lg text-foreground/50 flex items-center gap-1">
-                    <Wallet className="w-4 h-4" />
-                    {listing.price_eth} ETH
-                  </span>
                 )}
               </div>
               

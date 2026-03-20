@@ -69,8 +69,8 @@ class WasteListingCreate(BaseModel):
     waste_type: str
     quantity: float
     unit: str
-    price_usd: float
-    price_inr: Optional[float] = None
+    price_inr: float
+    price_usd: Optional[float] = None
     price_eth: Optional[float] = None
     location: str
     images: List[str] = []
@@ -108,8 +108,8 @@ class WasteListing(BaseModel):
     waste_type: str
     quantity: float
     unit: str
-    price_usd: float
-    price_inr: Optional[float] = None
+    price_inr: float
+    price_usd: Optional[float] = None
     price_eth: Optional[float] = None
     location: str
     images: List[str] = []
