@@ -190,44 +190,56 @@ const Navbar = () => {
   const navigate = useNavigate();
 
   return (
-    <nav className="sticky top-0 z-40 w-full border-b border-border bg-white/95 backdrop-blur-lg">
+    <nav className="sticky top-0 z-40 w-full border-b border-border/50 glass-effect backdrop-blur-2xl">
       <div className="max-w-7xl mx-auto px-6 py-4">
         <div className="flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2" data-testid="navbar-logo">
-            <Recycle className="w-8 h-8 text-primary" />
-            <span className="text-2xl font-black font-heading tracking-tight text-primary">EcoMarket</span>
-            <Badge variant="outline" className="ml-2 text-xs">DeFi Enabled</Badge>
+          <Link to="/" className="flex items-center gap-3 group" data-testid="navbar-logo">
+            <div className="p-2 rounded-xl bg-gradient-to-br from-purple-600 to-pink-600 ai-glow group-hover:scale-110 transition-transform duration-300">
+              <Recycle className="w-6 h-6 text-white" />
+            </div>
+            <span className="text-2xl font-black font-heading tracking-tight gradient-text">EcoMarket</span>
+            <Badge variant="outline" className="ml-2 text-xs border-primary/50 bg-primary/5 ai-glow">
+              <Sparkles className="w-3 h-3 mr-1 text-accent" />
+              AI Powered
+            </Badge>
           </Link>
           
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             {user ? (
               <>
                 <Link to="/marketplace" data-testid="nav-marketplace">
-                  <Button variant="ghost" className="transition-transform duration-200 hover:scale-105">Marketplace</Button>
+                  <Button variant="ghost" className="transition-all duration-200 hover:scale-105 hover:bg-primary/10">Marketplace</Button>
+                </Link>
+                <Link to="/create-listing" data-testid="nav-create-listing">
+                  <Button variant="ghost" className="transition-all duration-200 hover:scale-105 hover:bg-accent/10">
+                    <Upload className="w-4 h-4 mr-2" />
+                    Sell
+                  </Button>
                 </Link>
                 <Link to="/analytics" data-testid="nav-analytics">
-                  <Button variant="ghost" className="transition-transform duration-200 hover:scale-105">Analytics</Button>
+                  <Button variant="ghost" className="transition-all duration-200 hover:scale-105 hover:bg-secondary/10">Analytics</Button>
                 </Link>
                 {!walletAddress ? (
                   <Button 
                     onClick={connectWallet} 
                     variant="outline" 
                     size="sm"
-                    className="transition-transform duration-200 hover:scale-105"
+                    className="transition-all duration-200 hover:scale-105 border-primary/50 hover:bg-primary/10"
                     data-testid="connect-wallet-button"
                   >
                     <Wallet className="w-4 h-4 mr-2" />
                     Connect Wallet
                   </Button>
                 ) : (
-                  <Badge variant="default" className="font-mono text-xs">
-                    {walletAddress.substring(0, 6)}...{walletAddress.substring(38)}
+                  <Badge className="font-mono text-xs bg-gradient-to-r from-purple-600 to-pink-600 ai-glow">
+                    <Wallet className="w-3 h-3 mr-1" />
+                    {walletAddress.substring(0, 4)}...{walletAddress.substring(38)}
                   </Badge>
                 )}
                 <Button 
                   onClick={logout} 
                   variant="outline"
-                  className="transition-transform duration-200 hover:scale-105"
+                  className="transition-all duration-200 hover:scale-105"
                   data-testid="logout-button"
                 >
                   Logout
@@ -235,7 +247,9 @@ const Navbar = () => {
               </>
             ) : (
               <Link to="/auth" data-testid="nav-auth">
-                <Button className="rounded-full bg-primary hover:bg-primary/90 transition-all duration-200 hover:scale-105">Get Started</Button>
+                <Button className="rounded-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 transition-all duration-300 hover:scale-110 ai-glow font-semibold">
+                  Get Started
+                </Button>
               </Link>
             )}
           </div>
@@ -254,38 +268,51 @@ const LandingPage = () => {
   }, [user]);
 
   return (
-    <div className="min-h-screen">
-      <section className="relative py-20 lg:py-32 overflow-hidden bg-gradient-to-br from-background via-muted/20 to-background">
-        <div className="absolute inset-0 opacity-5">
-          <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzFBNEEzOCIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')] opacity-20" />
-        </div>
+    <div className="min-h-screen relative overflow-hidden">
+      {/* Animated background particles */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute w-96 h-96 bg-purple-500/10 rounded-full blur-3xl -top-48 -left-48 animate-float" />
+        <div className="absolute w-96 h-96 bg-blue-500/10 rounded-full blur-3xl top-1/4 right-0 animate-float" style={{animationDelay: '2s'}} />
+        <div className="absolute w-96 h-96 bg-pink-500/10 rounded-full blur-3xl bottom-0 left-1/3 animate-float" style={{animationDelay: '4s'}} />
+      </div>
+
+      <section className="relative py-20 lg:py-32 overflow-hidden">
         <div className="max-w-7xl mx-auto px-6 relative z-10">
           <div className="max-w-4xl mx-auto text-center">
-            <Badge variant="outline" className="mb-6 text-sm px-4 py-2">
-              <Sparkles className="w-4 h-4 mr-2 inline" />
-              Powered by AI & DeFi Technology
+            <Badge variant="outline" className="mb-6 text-sm px-6 py-2 ai-glow border-primary/50 bg-primary/5 backdrop-blur-sm">
+              <Sparkles className="w-4 h-4 mr-2 inline text-accent animate-pulse" />
+              <span className="gradient-text font-semibold">Powered by AI & DeFi Technology</span>
             </Badge>
-            <h1 className="text-5xl lg:text-7xl font-black font-heading text-primary tracking-tight leading-tight mb-6" data-testid="hero-title">
+            <h1 className="text-5xl lg:text-7xl font-black font-heading tracking-tight leading-tight mb-6 gradient-text floating-animation" data-testid="hero-title">
               Transform Industrial Waste Into Valuable Assets
             </h1>
-            <p className="text-lg lg:text-xl text-muted-foreground mb-8 leading-relaxed max-w-3xl mx-auto">
-              The world's first DeFi-enabled sustainable marketplace connecting industries, recyclers, and farmers. Trade waste materials with crypto payments, AI classification, and real-time impact tracking.
+            <p className="text-lg lg:text-xl text-foreground/80 mb-10 leading-relaxed max-w-3xl mx-auto">
+              The world's first <span className="text-primary font-semibold">AI-powered DeFi</span> marketplace connecting industries, recyclers, and farmers. Trade waste materials with crypto payments, intelligent classification, and real-time impact tracking.
             </p>
             <div className="flex flex-wrap gap-4 justify-center">
               <Button 
                 onClick={() => navigate("/auth")} 
                 size="lg" 
-                className="rounded-full bg-primary hover:bg-primary/90 text-lg px-8 py-6 transition-all duration-200 hover:scale-105 shadow-lg"
+                className="rounded-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-lg px-10 py-7 transition-all duration-300 hover:scale-110 hover:shadow-2xl ai-glow font-bold"
                 data-testid="hero-cta-button"
               >
                 <Store className="w-5 h-5 mr-2" />
-                Start Trading
+                Start Trading Now
+              </Button>
+              <Button 
+                onClick={() => navigate("/create-listing")} 
+                size="lg" 
+                className="rounded-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-lg px-10 py-7 transition-all duration-300 hover:scale-110 hover:shadow-2xl font-bold"
+                data-testid="hero-sell-button"
+              >
+                <Upload className="w-5 h-5 mr-2" />
+                Sell Waste Material
               </Button>
               <Button 
                 onClick={() => navigate("/analytics")} 
                 size="lg" 
                 variant="outline"
-                className="rounded-full text-lg px-8 py-6 transition-all duration-200 hover:scale-105"
+                className="rounded-full text-lg px-10 py-7 transition-all duration-300 hover:scale-110 border-2 border-primary/50 glass-effect hover:bg-primary/10"
                 data-testid="hero-analytics-button"
               >
                 <BarChart3 className="w-5 h-5 mr-2" />
@@ -296,44 +323,43 @@ const LandingPage = () => {
         </div>
       </section>
 
-      <section className="py-20 bg-white">
+      <section className="py-20 relative">
         <div className="max-w-7xl mx-auto px-6">
-          <h2 className="text-4xl lg:text-5xl font-black font-heading text-center mb-4 text-primary">How It Works</h2>
-          <p className="text-center text-muted-foreground mb-16 max-w-2xl mx-auto">Three simple steps to start trading and making an environmental impact</p>
+          <div className="text-center mb-16">
+            <h2 className="text-4xl lg:text-5xl font-black font-heading mb-4 gradient-text">How It Works</h2>
+            <p className="text-foreground/70 text-lg max-w-2xl mx-auto">Three simple steps powered by artificial intelligence</p>
+          </div>
           
           <div className="grid md:grid-cols-3 gap-8">
-            <Card className="border-2 transition-all duration-200 hover:-translate-y-2 hover:shadow-xl relative" data-testid="feature-card-1">
-              <div className="absolute -top-4 left-6 bg-primary text-white w-8 h-8 rounded-full flex items-center justify-center font-bold">1</div>
-              <CardHeader className="pt-8">
-                <Factory className="w-12 h-12 text-primary mb-4" />
-                <CardTitle className="text-2xl font-heading">List Your Waste</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">Upload detailed information, images, and set pricing in USD or ETH. Our AI will classify and optimize your listing.</p>
-              </CardContent>
-            </Card>
+            <div className="card-3d glass-effect rounded-2xl p-8 relative overflow-hidden group" data-testid="feature-card-1">
+              <div className="absolute inset-0 bg-gradient-to-br from-purple-600/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              <div className="absolute -top-4 left-6 bg-gradient-to-r from-purple-600 to-pink-600 text-white w-12 h-12 rounded-full flex items-center justify-center font-black text-xl ai-glow">1</div>
+              <div className="relative z-10">
+                <Factory className="w-16 h-16 text-primary mb-6 group-hover:scale-110 transition-transform duration-300" />
+                <h3 className="text-2xl font-black font-heading mb-4">List Your Waste</h3>
+                <p className="text-foreground/70 leading-relaxed">Upload detailed information, images, and set pricing in USD or ETH. Our AI will classify and optimize your listing automatically.</p>
+              </div>
+            </div>
             
-            <Card className="border-2 transition-all duration-200 hover:-translate-y-2 hover:shadow-xl relative" data-testid="feature-card-2">
-              <div className="absolute -top-4 left-6 bg-chart-2 text-primary w-8 h-8 rounded-full flex items-center justify-center font-bold">2</div>
-              <CardHeader className="pt-8">
-                <ShoppingCart className="w-12 h-12 text-chart-2 mb-4" />
-                <CardTitle className="text-2xl font-heading">Browse & Buy</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">Search verified waste materials, view AI classifications, and purchase using traditional or crypto payments.</p>
-              </CardContent>
-            </Card>
+            <div className="card-3d glass-effect rounded-2xl p-8 relative overflow-hidden group" data-testid="feature-card-2">
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-600/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              <div className="absolute -top-4 left-6 bg-gradient-to-r from-blue-600 to-cyan-600 text-white w-12 h-12 rounded-full flex items-center justify-center font-black text-xl ai-glow">2</div>
+              <div className="relative z-10">
+                <ShoppingCart className="w-16 h-16 text-secondary mb-6 group-hover:scale-110 transition-transform duration-300" />
+                <h3 className="text-2xl font-black font-heading mb-4">Browse & Buy</h3>
+                <p className="text-foreground/70 leading-relaxed">Search verified waste materials, view AI classifications, and purchase using traditional or crypto payments securely.</p>
+              </div>
+            </div>
             
-            <Card className="border-2 transition-all duration-200 hover:-translate-y-2 hover:shadow-xl relative" data-testid="feature-card-3">
-              <div className="absolute -top-4 left-6 bg-accent text-white w-8 h-8 rounded-full flex items-center justify-center font-bold">3</div>
-              <CardHeader className="pt-8">
-                <TrendingUp className="w-12 h-12 text-accent mb-4" />
-                <CardTitle className="text-2xl font-heading">Track Impact</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">Monitor your environmental contribution with real-time analytics showing CO2 saved, waste diverted, and more.</p>
-              </CardContent>
-            </Card>
+            <div className="card-3d glass-effect rounded-2xl p-8 relative overflow-hidden group" data-testid="feature-card-3">
+              <div className="absolute inset-0 bg-gradient-to-br from-pink-600/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              <div className="absolute -top-4 left-6 bg-gradient-to-r from-pink-600 to-purple-600 text-white w-12 h-12 rounded-full flex items-center justify-center font-black text-xl ai-glow">3</div>
+              <div className="relative z-10">
+                <TrendingUp className="w-16 h-16 text-accent mb-6 group-hover:scale-110 transition-transform duration-300" />
+                <h3 className="text-2xl font-black font-heading mb-4">Track Impact</h3>
+                <p className="text-foreground/70 leading-relaxed">Monitor your environmental contribution with real-time analytics showing CO2 saved, waste diverted, and sustainability metrics.</p>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -543,74 +569,79 @@ const Marketplace = () => {
   };
 
   const ListingCard = ({ listing, isMine = false }) => (
-    <Card 
-      className="border-2 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg cursor-pointer overflow-hidden" 
+    <div 
+      className="card-3d glass-effect rounded-2xl overflow-hidden cursor-pointer group border border-border/50 hover:border-primary/50" 
       onClick={() => navigate(`/listing/${listing.id}`)}
       data-testid={`listing-card-${listing.id}`}
     >
       {listing.images.length > 0 ? (
-        <div className="relative h-48 w-full overflow-hidden">
+        <div className="relative h-52 w-full overflow-hidden">
           <img 
             src={`${API}/files/${listing.images[0]}?auth=${localStorage.getItem("token")}`} 
             alt={listing.title} 
-            className="w-full h-full object-cover transition-transform duration-300 hover:scale-110"
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
           />
-          <Badge className="absolute top-3 right-3" variant={listing.status === "available" ? "default" : "secondary"}>
+          <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent" />
+          <Badge className="absolute top-4 right-4 ai-glow" variant={listing.status === "available" ? "default" : "secondary"}>
             {listing.status}
           </Badge>
+          {listing.ai_classification && (
+            <div className="absolute top-4 left-4 bg-accent/90 backdrop-blur-sm text-accent-foreground px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
+              <Sparkles className="w-3 h-3" />
+              AI Classified
+            </div>
+          )}
         </div>
       ) : (
-        <div className="h-48 w-full bg-muted flex items-center justify-center">
-          <Package className="w-16 h-16 text-muted-foreground" />
+        <div className="h-52 w-full bg-gradient-to-br from-primary/5 to-accent/5 flex items-center justify-center">
+          <Package className="w-20 h-20 text-muted-foreground/30" />
         </div>
       )}
       
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between gap-2">
-          <CardTitle className="font-heading text-lg line-clamp-1">{listing.title}</CardTitle>
-          {listing.ai_classification && (
-            <Sparkles className="w-5 h-5 text-accent flex-shrink-0" />
-          )}
+      <div className="p-5 space-y-4">
+        <div>
+          <h3 className="font-heading text-xl font-bold line-clamp-1 mb-2 group-hover:text-primary transition-colors">{listing.title}</h3>
+          <p className="text-sm text-foreground/60 line-clamp-2 leading-relaxed">{listing.description}</p>
         </div>
-        <CardDescription className="line-clamp-2 text-sm">{listing.description}</CardDescription>
-      </CardHeader>
-      
-      <CardContent className="space-y-3">
-        <div className="flex items-center justify-between">
-          <Badge variant="outline" className="text-xs">{listing.waste_type}</Badge>
+        
+        <div className="flex items-center justify-between pt-3 border-t border-border/50">
+          <Badge variant="outline" className="text-xs font-semibold">{listing.waste_type}</Badge>
           <div className="text-right">
-            <div className="text-xl font-black font-heading text-primary">${listing.price_usd}</div>
+            <div className="text-2xl font-black font-heading gradient-text">${listing.price_usd}</div>
             {listing.price_eth && (
-              <div className="text-xs text-muted-foreground">{listing.price_eth} ETH</div>
+              <div className="text-xs text-foreground/50 flex items-center gap-1 justify-end">
+                <Wallet className="w-3 h-3" />
+                {listing.price_eth} ETH
+              </div>
             )}
           </div>
         </div>
         
-        <div className="grid grid-cols-2 gap-2 text-sm text-muted-foreground">
-          <div className="flex items-center gap-1">
-            <Package className="w-4 h-4" />
+        <div className="grid grid-cols-2 gap-3 text-sm">
+          <div className="flex items-center gap-2 text-foreground/70">
+            <Package className="w-4 h-4 text-primary" />
             <span className="truncate">{listing.quantity} {listing.unit}</span>
           </div>
-          <div className="flex items-center gap-1">
-            <MapPin className="w-4 h-4" />
+          <div className="flex items-center gap-2 text-foreground/70">
+            <MapPin className="w-4 h-4 text-secondary" />
             <span className="truncate">{listing.location}</span>
           </div>
         </div>
         
         {listing.purity_percentage && (
-          <div className="flex items-center gap-2 text-xs">
-            <span className="text-muted-foreground">Purity:</span>
-            <Badge variant="outline" className="text-xs">{listing.purity_percentage}%</Badge>
+          <div className="flex items-center justify-between text-xs pt-2 border-t border-border/30">
+            <span className="text-foreground/60">Purity:</span>
+            <Badge variant="outline" className="text-xs bg-primary/5">{listing.purity_percentage}%</Badge>
           </div>
         )}
         
         {!isMine && (
-          <div className="pt-2 border-t text-xs text-muted-foreground">
-            Seller: <span className="font-semibold">{listing.seller_name}</span>
+          <div className="pt-2 text-xs text-foreground/50">
+            Seller: <span className="font-semibold text-foreground/80">{listing.seller_name}</span>
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 
   return (

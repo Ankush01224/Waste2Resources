@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Chivo:wght@300;400;700;900&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,63 +6,79 @@
 
 body {
     margin: 0;
-    font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    background: #0A0E27;
+    color: #E0E7FF;
 }
 
 code {
-    font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New", monospace;
+    font-family: 'Space Grotesk', source-code-pro, Menlo, Monaco, Consolas, monospace;
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-20px); }
+}
+
+@keyframes pulse-glow {
+    0%, 100% { box-shadow: 0 0 20px rgba(124, 58, 237, 0.5); }
+    50% { box-shadow: 0 0 40px rgba(124, 58, 237, 0.8); }
+}
+
+@keyframes gradient-shift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+.animate-float {
+    animation: float 6s ease-in-out infinite;
+}
+
+.animate-pulse-glow {
+    animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.gradient-animate {
+    background-size: 200% 200%;
+    animation: gradient-shift 8s ease infinite;
+}
+
+.glass-card {
+    background: rgba(15, 23, 42, 0.7);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(148, 163, 184, 0.1);
 }
 
 @layer base {
     :root {
-        --background: 60 5% 99%;
-        --foreground: 156 40% 15%;
-        --card: 0 0% 100%;
-        --card-foreground: 156 40% 15%;
-        --popover: 0 0% 100%;
-        --popover-foreground: 156 40% 15%;
-        --primary: 156 45% 20%;
+        --background: 222 47% 11%;
+        --foreground: 226 100% 97%;
+        --card: 224 71% 4%;
+        --card-foreground: 226 100% 97%;
+        --popover: 224 71% 4%;
+        --popover-foreground: 226 100% 97%;
+        --primary: 263 70% 50%;
         --primary-foreground: 0 0% 100%;
-        --secondary: 12 45% 58%;
+        --secondary: 217 91% 60%;
         --secondary-foreground: 0 0% 100%;
-        --muted: 156 10% 96%;
-        --muted-foreground: 156 10% 45%;
-        --accent: 12 45% 58%;
-        --accent-foreground: 0 0% 100%;
+        --muted: 223 47% 11%;
+        --muted-foreground: 226 64% 88%;
+        --accent: 280 100% 70%;
+        --accent-foreground: 224 71% 4%;
         --destructive: 0 84.2% 60.2%;
         --destructive-foreground: 0 0% 98%;
-        --border: 156 15% 90%;
-        --input: 156 15% 90%;
-        --ring: 156 45% 20%;
-        --chart-1: 142 76% 36%;
-        --chart-2: 86 78% 68%;
-        --chart-3: 156 45% 20%;
-        --chart-4: 12 45% 58%;
-        --chart-5: 156 10% 45%;
-        --radius: 0.5rem;
-    }
-    .dark {
-        --background: 156 40% 10%;
-        --foreground: 0 0% 98%;
-        --card: 156 40% 12%;
-        --card-foreground: 0 0% 98%;
-        --popover: 156 40% 10%;
-        --popover-foreground: 0 0% 98%;
-        --primary: 142 76% 36%;
-        --primary-foreground: 0 0% 100%;
-        --secondary: 12 45% 58%;
-        --secondary-foreground: 0 0% 100%;
-        --muted: 156 30% 20%;
-        --muted-foreground: 156 10% 70%;
-        --accent: 86 78% 68%;
-        --accent-foreground: 156 40% 10%;
-        --destructive: 0 62.8% 30.6%;
-        --destructive-foreground: 0 0% 98%;
-        --border: 156 30% 20%;
-        --input: 156 30% 20%;
-        --ring: 142 76% 36%;
+        --border: 215 20% 20%;
+        --input: 215 20% 20%;
+        --ring: 263 70% 50%;
+        --chart-1: 263 70% 50%;
+        --chart-2: 217 91% 60%;
+        --chart-3: 280 100% 70%;
+        --chart-4: 142 76% 58%;
+        --chart-5: 197 71% 73%;
+        --radius: 1rem;
     }
 }
 
@@ -72,12 +88,17 @@ code {
     }
     body {
         @apply bg-background text-foreground;
+        background-image: 
+            radial-gradient(at 0% 0%, rgba(124, 58, 237, 0.15) 0px, transparent 50%),
+            radial-gradient(at 100% 100%, rgba(59, 130, 246, 0.15) 0px, transparent 50%),
+            radial-gradient(at 50% 50%, rgba(168, 85, 247, 0.1) 0px, transparent 50%);
     }
     h1, h2, h3, h4, h5, h6 {
         @apply font-heading;
+        font-family: 'Space Grotesk', sans-serif;
     }
     p, span, div {
-        @apply font-body;
+        font-family: 'Inter', sans-serif;
     }
 }
 

@@ -5,8 +5,8 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        heading: ['Chivo', 'sans-serif'],
-        body: ['IBM Plex Sans', 'sans-serif'],
+        heading: ['Space Grotesk', 'sans-serif'],
+        body: ['Inter', 'sans-serif'],
       },
       borderRadius: {
         lg: 'var(--radius)',
@@ -54,6 +54,16 @@ module.exports = {
           '4': 'hsl(var(--chart-4))',
           '5': 'hsl(var(--chart-5))'
         }
+      },
+      animation: {
+        'float': 'float 6s ease-in-out infinite',
+        'pulse-glow': 'pulse-glow 2s ease-in-out infinite',
+        'gradient': 'gradient-shift 8s ease infinite'
+      },
+      backgroundImage: {
+        'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
+        'ai-gradient': 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        'cyber-gradient': 'linear-gradient(135deg, #00d4ff 0%, #7c3aed 50%, #ec4899 100%)'
       }
     }
   },

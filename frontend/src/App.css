@@ -6,26 +6,60 @@
   min-height: 100vh;
 }
 
-.App-header {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 100vh;
-  font-size: calc(10px + 2vmin);
+.card-3d {
+  transform-style: preserve-3d;
+  transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1);
 }
 
-.App-link {
-  text-decoration: none;
+.card-3d:hover {
+  transform: translateY(-12px) rotateX(5deg) rotateY(-5deg) scale(1.02);
 }
 
-.App-link img {
-  width: 120px;
-  height: 120px;
-  border-radius: 50%;
-  transition: transform 0.3s ease;
+.ai-glow {
+  box-shadow: 
+    0 0 20px rgba(124, 58, 237, 0.3),
+    0 0 40px rgba(124, 58, 237, 0.2),
+    inset 0 0 10px rgba(124, 58, 237, 0.1);
 }
 
-.App-link img:hover {
-  transform: scale(1.05);
+.ai-glow:hover {
+  box-shadow: 
+    0 0 30px rgba(124, 58, 237, 0.5),
+    0 0 60px rgba(124, 58, 237, 0.3),
+    inset 0 0 15px rgba(124, 58, 237, 0.2);
+}
+
+.glass-effect {
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.gradient-text {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #ec4899 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.cyber-border {
+  position: relative;
+  border: 2px solid transparent;
+  background: linear-gradient(#0A0E27, #0A0E27) padding-box,
+              linear-gradient(135deg, #667eea, #764ba2) border-box;
+}
+
+.floating-animation {
+  animation: float 6s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: -1000px 0; }
+  100% { background-position: 1000px 0; }
+}
+
+.shimmer {
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+  background-size: 1000px 100%;
+  animation: shimmer 3s infinite;
 }
