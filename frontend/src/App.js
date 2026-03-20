@@ -125,43 +125,74 @@ const AIChatbot = () => {
       setSessionId(response.data.session_id);
       setMessages(prev => [...prev, { role: "assistant", content: response.data.response }]);
     } catch (error) {
-      toast.error("Failed to send message");
+      console.error("Chat error:", error);
+      setMessages(prev => [...prev, { role: "assistant", content: "I'm experiencing technical difficulties. Please try again!" }]);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
     }
   };
 
   return (
     <>
       <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="fixed bottom-6 right-6 z-50 w-16 h-16 bg-gradient-to-br from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-full shadow-2xl transition-all duration-300 hover:scale-110 flex items-center justify-center ai-glow animate-pulse-glow"
+        onClick={() => {
+          console.log("Chatbot button clicked!", isOpen);
+          setIsOpen(!isOpen);
+        }}
+        className="fixed bottom-6 right-24 z-[100] w-16 h-16 bg-gradient-to-br from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-full shadow-2xl transition-all duration-300 hover:scale-110 flex items-center justify-center ai-glow cursor-pointer"
+        style={{
+          animation: 'pulse-glow 2s ease-in-out infinite',
+          border: '2px solid rgba(255, 255, 255, 0.2)'
+        }}
         data-testid="ai-chatbot-button"
+        aria-label="Open AI Chatbot"
       >
-        {isOpen ? <X className="w-7 h-7" /> : <MessageCircle className="w-7 h-7" />}
+        {isOpen ? <X className="w-7 h-7" /> : <MessageCircle className="w-7 h-7 animate-pulse" />}
       </button>
 
       {isOpen && (
-        <div className="fixed bottom-24 right-6 z-50 w-96 h-[500px] glass-effect rounded-2xl shadow-2xl border border-border/50 flex flex-col overflow-hidden" data-testid="ai-chatbot-window">
-          <div className="bg-gradient-to-r from-purple-600 to-pink-600 text-white p-4 rounded-t-2xl">
+        <div 
+          className="fixed bottom-24 right-24 z-[99] w-96 rounded-2xl shadow-2xl border-2 border-primary/50 flex flex-col overflow-hidden"
+          style={{
+            height: '520px',
+            background: 'rgba(15, 23, 42, 0.95)',
+            backdropFilter: 'blur(20px)',
+            boxShadow: '0 0 40px rgba(124, 58, 237, 0.4)'
+          }}
+          data-testid="ai-chatbot-window"
+        >
+          <div className="bg-gradient-to-r from-purple-600 to-pink-600 text-white p-4 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Sparkles className="w-5 h-5 animate-pulse" />
               <div>
                 <h3 className="font-bold font-heading text-lg">AI Assistant</h3>
-                <p className="text-xs opacity-90">24/7 Support • Powered by GPT-4o</p>
+                <p className="text-xs opacity-90">Powered by GPT-4o • 24/7 Support</p>
               </div>
             </div>
+            <button 
+              onClick={() => setIsOpen(false)}
+              className="hover:bg-white/20 p-1 rounded transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-background/95">
+          <div className="flex-1 overflow-y-auto p-4 space-y-4" style={{background: 'rgba(10, 14, 39, 0.8)'}}>
             {messages.map((msg, idx) => (
-              <div key={idx} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-                <div className={`max-w-[80%] p-3 rounded-2xl ${
+              <div key={idx} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"} animate-in fade-in slide-in-from-bottom-2 duration-300`}>
+                <div className={`max-w-[85%] p-3 rounded-2xl ${
                   msg.role === "user" 
                     ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white" 
-                    : "glass-effect border border-border/50"
+                    : "glass-effect border border-border/50 text-foreground"
                 }`}>
-                  <p className="text-sm leading-relaxed">{msg.content}</p>
+                  <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
                 </div>
               </div>
             ))}
@@ -172,32 +203,36 @@ const AIChatbot = () => {
                     <span className="animate-pulse">●</span>
                     <span className="animate-pulse" style={{animationDelay: '0.2s'}}>●</span>
                     <span className="animate-pulse" style={{animationDelay: '0.4s'}}>●</span>
-                    AI is thinking...
+                    <span className="text-foreground/70">AI is thinking...</span>
                   </p>
                 </div>
               </div>
             )}
           </div>
 
-          <div className="p-4 border-t border-border/50 bg-background/95">
+          <div className="p-4 border-t border-border/50" style={{background: 'rgba(15, 23, 42, 0.9)'}}>
             <div className="flex gap-2">
               <Input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                onKeyPress={(e) => e.key === "Enter" && sendMessage()}
-                placeholder="Ask anything..."
-                className="flex-1 glass-effect border-border/50"
+                onKeyPress={handleKeyPress}
+                placeholder="Ask me anything..."
+                className="flex-1 glass-effect border-border/50 text-foreground placeholder:text-foreground/50"
                 data-testid="ai-chat-input"
               />
               <Button 
                 onClick={sendMessage} 
                 size="icon" 
-                className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+                className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 transition-all duration-200 hover:scale-105"
                 data-testid="ai-chat-send"
+                disabled={!input.trim() || isLoading}
               >
                 <Send className="w-4 h-4" />
               </Button>
             </div>
+            <p className="text-xs text-foreground/40 mt-2 text-center">
+              Powered by OpenAI GPT-4o • All conversations are private
+            </p>
           </div>
         </div>
       )}
