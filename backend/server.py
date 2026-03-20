@@ -70,6 +70,7 @@ class WasteListingCreate(BaseModel):
     quantity: float
     unit: str
     price_usd: float
+    price_inr: Optional[float] = None
     price_eth: Optional[float] = None
     location: str
     images: List[str] = []
@@ -87,6 +88,7 @@ class WasteListingUpdate(BaseModel):
     quantity: Optional[float] = None
     unit: Optional[str] = None
     price_usd: Optional[float] = None
+    price_inr: Optional[float] = None
     price_eth: Optional[float] = None
     location: Optional[str] = None
     images: Optional[List[str]] = None
@@ -107,6 +109,7 @@ class WasteListing(BaseModel):
     quantity: float
     unit: str
     price_usd: float
+    price_inr: Optional[float] = None
     price_eth: Optional[float] = None
     location: str
     images: List[str] = []
@@ -496,7 +499,8 @@ async def get_analytics():
     )
 
 @api_router.post("/chat")
-async def ai_chat(chat_data: ChatMessage, current_user: User = Depends(get_current_user)):
+async def ai_chat(chat_data: ChatMessage):
+    # Remove authentication requirement for public chatbot access
     try:
         session_id = chat_data.session_id or str(uuid.uuid4())
         
