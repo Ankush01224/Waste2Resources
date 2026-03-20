@@ -1,0 +1,130 @@
+{
+  "theme": "Light theme preferred, dark theme support",
+  "archetype": "ORGANIC & EARTHY mixed with SWISS & HIGH-CONTRAST",
+  "typography": {
+    "heading": "Chivo",
+    "body": "IBM Plex Sans",
+    "rules": [
+      "Use Chivo for all Headings (font-black for large impact, font-light for elegance).",
+      "Use IBM Plex Sans for body text and dashboard data.",
+      "Do NOT use Inter, Roboto, or Space Grotesk for headings.",
+      "Use tracking-tight for large headings (>32px).",
+      "Use uppercase + wide tracking for overlines and labels.",
+      "Do NOT use generic text centering. Only center if it improves visual balance."
+    ]
+  },
+  "colors": {
+    "background": "#FDFDFC",
+    "primary": "#1A4A38",
+    "primary_foreground": "#FFFFFF",
+    "accent": "#C86A53",
+    "accent_foreground": "#FFFFFF",
+    "metric_positive": "#22C55E",
+    "metric_accent": "#D4F860",
+    "neutral": "#F4F5F4",
+    "card": "#FFFFFF",
+    "border": "#E5E7EB",
+    "rules": [
+      "Never use pure black or gray, tint neutral grays slightly with green/blue.",
+      "Limit color palette: neutrals for 90% of UI, primary/accent for 10%.",
+      "No generic full-screen gradients. Use solid colors with crisp borders.",
+      "Ensure contrast ratio of 4.5:1 for normal text.",
+      "CRITICAL: DO NOT use complete transparent background in header, overlays, or surfaces with content under it."
+    ]
+  },
+  "visual_enhancers": {
+    "surfaces": [
+      "GRID BORDERS: Use for Data-heavy Dashboards and Features Sections. Expose the skeleton with subtle borders on right/bottom of grid items.",
+      "GLASSMORPHISM: High-end glass (backdrop-blur-xl) with 1px delicate inner stroke for sticky headers.",
+      "NEUMORPHISM: Avoid soft UI everywhere. Use sharp 1px borders to ground components."
+    ],
+    "shadows": [
+      "Subtle ambient shadow `shadow-sm` on cards.",
+      "Hover states should have a slight lift `-translate-y-1` and `shadow-md`."
+    ]
+  },
+  "component_name": [
+    "Dashboard Metrics Card: Flat background, 1px subtle border, sharp or slightly rounded corners (max 8px).",
+    "Waste Listing Card: High-contrast title, clear image max-h-[200px], prominent price/quantity.",
+    "Data Charts: Use Recharts with monochromatic green/earthy scales.",
+    "CTAs: Primary brand color, pill-shaped or sharp with interaction animations."
+  ],
+  "grids": {
+    "marketing_page": "MODE A: THE TETRIS GRID - Asymmetric grid-cols-1 md:grid-cols-12 with wide gaps (gap-8).",
+    "dashboard": "MODE B: High Density Grid - grid-cols-1 md:grid-cols-3 lg:grid-cols-4. Tight gaps (gap-4 or gap-6). Use full width/height for widgets."
+  },
+  "layouts": {
+    "spacing": "Generous Spacing: Use 2-3x more spacing (p-8, p-12). Containers with borders must have internal padding (p-6).",
+    "alignment": "Left-align paragraphs, labels, and dense content. Center-align hero sections if it improves balance. Optical alignment over geometrical.",
+    "rules": [
+      "Direct Children Only: Grid items MUST be direct children of grid containers.",
+      "Mobile-first responsive (always).",
+      "Override default stretch behavior on grid with `align-items: start`. Add `align-self: stretch` to individual items which need stretch."
+    ]
+  },
+  "motion": {
+    "rules": [
+      "Always include hover states for interactive elements (background change + text color change).",
+      "Use specific transitions (e.g., `transition: transform 0.2s ease, opacity 0.2s ease`). NEVER use `transition: all`.",
+      "Entrance animations for dashboard widgets and marketplace listings (staggered)."
+    ]
+  },
+  "accessibility": {
+    "contrast": "Minimum 4.5:1 for normal text, 3:1 for large text.",
+    "testing": "All interactive and key informational elements MUST include `data-testid` attribute (e.g., `data-testid=\"listing-card-button\"`).",
+    "motion": "Respect `prefers-reduced-motion`."
+  },
+  "media": {
+    "images": [
+      "Mobile Height Limit: Images MUST NOT exceed 80vh on mobile.",
+      "Use `object-cover` and maintain aspect ratios."
+    ],
+    "icons": [
+      "Use `@phosphor-icons/react` for high-end duotone weight in marketing pages.",
+      "Use `lucide-react` for standard SaaS elements."
+    ]
+  },
+  "3d_libraries": [
+    "Recharts: For Dashboard data visualization.",
+    "TSParticles: For subtle background life in the marketing hero section (if required)."
+  ],
+  "image_urls": [
+    {
+      "url": "https://images.pexels.com/photos/36397860/pexels-photo-36397860.jpeg",
+      "category": "Hero / Dashboard",
+      "description": "Overhead crane sorting scrap metal in an industrial recycling facility."
+    },
+    {
+      "url": "https://images.pexels.com/photos/916406/pexels-photo-916406.jpeg",
+      "category": "Marketing / Feature",
+      "description": "Farmer harvesting wheat, representing crop residue."
+    },
+    {
+      "url": "https://images.pexels.com/photos/109391/pexels-photo-109391.jpeg",
+      "category": "Impact Tracker Background",
+      "description": "Clean nature forest landscape, representing environmental impact."
+    }
+  ],
+  "component_path": "/app/frontend/src/components/ui",
+  "instructions_to_main_agent": [
+    "CRITICAL: Write ONLY .js or .jsx files. Do not use .tsx or .ts. The environment is configured for JS.",
+    "Update `tailwind.config.js` to include Chivo and IBM Plex Sans fonts.",
+    "Update `index.css` to import the fonts from Google Fonts or similar, and apply the color variables.",
+    "Use standard Shadcn components but override their styles to match the ORGANIC & EARTHY theme.",
+    "Remove `.App { text-align: center; }` from any CSS file if it exists."
+  ],
+  "UNIVERSAL GUIDELINES FOR MAIN AGENT": [
+    "You tend to converge toward generic, 'on distribution' outputs. Avoid this: make creative, distinctive frontends that surprise and delight.",
+    "Do not use generic centered layouts, simplistic gradients, or uniform styling.",
+    "Create depth through layered design elements with z-index hierarchy.",
+    "You MUST NOT apply universal transition (e.g., `transition: all`). Always add transitions for specific interactive elements.",
+    "You MUST NOT center align the app container.",
+    "Always use modern button styles (pill-shaped or sharp) with interaction animations.",
+    "NEVER use AI assistant Emoji characters.",
+    "Every interaction needs micro-animations (hover states, transitions).",
+    "Use 2-3x more spacing than feels comfortable.",
+    "Components MUST use named exports, Pages MUST use default exports.",
+    "Use sonner for toasts.",
+    "All interactive elements MUST include `data-testid`."
+  ]
+}
