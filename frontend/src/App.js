@@ -1,5 +1,5 @@
 import React, { useState, useEffect, createContext, useContext } from "react";
-import { BrowserRouter, Routes, Route, Navigate, Link, useNavigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, Link, useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import { Toaster, toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Recycle, Factory, Leaf, TrendingUp, Upload, Search, MapPin, DollarSign, Package, Sparkles, BarChart3, TreeDeciduous, Cloud } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Recycle, Factory, Leaf, TrendingUp, Upload, Search, MapPin, DollarSign, Package, Sparkles, BarChart3, TreeDeciduous, Cloud, MessageCircle, X, Send, Wallet, ShoppingCart, Store, Shield, CheckCircle2, TrendingDown } from "lucide-react";
+import { AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import "@/App.css";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -28,6 +30,7 @@ const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(localStorage.getItem("token"));
   const [loading, setLoading] = useState(true);
+  const [walletAddress, setWalletAddress] = useState(null);
 
   useEffect(() => {
     if (token) {
@@ -42,11 +45,35 @@ const AuthProvider = ({ children }) => {
     try {
       const response = await axios.get(`${API}/auth/me`);
       setUser(response.data);
+      if (response.data.wallet_address) {
+        setWalletAddress(response.data.wallet_address);
+      }
     } catch (error) {
       console.error("Failed to fetch user", error);
       logout();
     } finally {
       setLoading(false);
+    }
+  };
+
+  const connectWallet = async () => {
+    if (typeof window.ethereum !== 'undefined') {
+      try {
+        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+        const address = accounts[0];
+        setWalletAddress(address);
+        if (user) {
+          await axios.put(`${API}/auth/wallet?wallet_address=${address}`);
+          toast.success("Wallet connected successfully!");
+        }
+        return address;
+      } catch (error) {
+        toast.error("Failed to connect wallet");
+        return null;
+      }
+    } else {
+      toast.error("Please install MetaMask!");
+      return null;
     }
   };
 
@@ -61,41 +88,142 @@ const AuthProvider = ({ children }) => {
     localStorage.removeItem("token");
     setToken(null);
     setUser(null);
+    setWalletAddress(null);
     delete axios.defaults.headers.common["Authorization"];
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, loading }}>
+    <AuthContext.Provider value={{ user, token, login, logout, loading, walletAddress, connectWallet }}>
       {children}
     </AuthContext.Provider>
   );
 };
 
+const AIChatbot = () => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [messages, setMessages] = useState([
+    { role: "assistant", content: "Hi! I'm your 24/7 AI assistant. How can I help you today?" }
+  ]);
+  const [input, setInput] = useState("");
+  const [sessionId, setSessionId] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const sendMessage = async () => {
+    if (!input.trim()) return;
+
+    const userMessage = { role: "user", content: input };
+    setMessages([...messages, userMessage]);
+    setInput("");
+    setIsLoading(true);
+
+    try {
+      const response = await axios.post(`${API}/chat`, {
+        message: input,
+        session_id: sessionId
+      });
+      
+      setSessionId(response.data.session_id);
+      setMessages(prev => [...prev, { role: "assistant", content: response.data.response }]);
+    } catch (error) {
+      toast.error("Failed to send message");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <>
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="fixed bottom-6 right-6 z-50 w-16 h-16 bg-primary hover:bg-primary/90 text-white rounded-full shadow-lg transition-all duration-200 hover:scale-110 flex items-center justify-center"
+        data-testid="ai-chatbot-button"
+      >
+        {isOpen ? <X className="w-6 h-6" /> : <MessageCircle className="w-6 h-6" />}
+      </button>
+
+      {isOpen && (
+        <div className="fixed bottom-24 right-6 z-50 w-96 h-[500px] bg-white rounded-lg shadow-2xl border-2 border-border flex flex-col" data-testid="ai-chatbot-window">
+          <div className="bg-primary text-white p-4 rounded-t-lg">
+            <h3 className="font-bold font-heading">24/7 AI Assistant</h3>
+            <p className="text-xs opacity-90">Ask me anything about EcoMarket</p>
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            {messages.map((msg, idx) => (
+              <div key={idx} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+                <div className={`max-w-[80%] p-3 rounded-lg ${msg.role === "user" ? "bg-primary text-white" : "bg-muted"}`}>
+                  <p className="text-sm">{msg.content}</p>
+                </div>
+              </div>
+            ))}
+            {isLoading && (
+              <div className="flex justify-start">
+                <div className="bg-muted p-3 rounded-lg">
+                  <p className="text-sm">Typing...</p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="p-4 border-t">
+            <div className="flex gap-2">
+              <Input
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyPress={(e) => e.key === "Enter" && sendMessage()}
+                placeholder="Type your message..."
+                data-testid="ai-chat-input"
+              />
+              <Button onClick={sendMessage} size="icon" data-testid="ai-chat-send">
+                <Send className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+};
+
 const Navbar = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, walletAddress, connectWallet } = useAuth();
   const navigate = useNavigate();
 
   return (
-    <nav className="sticky top-0 z-50 w-full border-b border-border bg-white/80 backdrop-blur-xl">
+    <nav className="sticky top-0 z-40 w-full border-b border-border bg-white/95 backdrop-blur-lg">
       <div className="max-w-7xl mx-auto px-6 py-4">
         <div className="flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2" data-testid="navbar-logo">
             <Recycle className="w-8 h-8 text-primary" />
             <span className="text-2xl font-black font-heading tracking-tight text-primary">EcoMarket</span>
+            <Badge variant="outline" className="ml-2 text-xs">DeFi Enabled</Badge>
           </Link>
           
           <div className="flex items-center gap-4">
             {user ? (
               <>
-                <Link to="/dashboard" data-testid="nav-dashboard">
-                  <Button variant="ghost" className="transition-transform duration-200 hover:scale-105">Dashboard</Button>
-                </Link>
                 <Link to="/marketplace" data-testid="nav-marketplace">
                   <Button variant="ghost" className="transition-transform duration-200 hover:scale-105">Marketplace</Button>
                 </Link>
-                <Link to="/impact" data-testid="nav-impact">
-                  <Button variant="ghost" className="transition-transform duration-200 hover:scale-105">Impact</Button>
+                <Link to="/analytics" data-testid="nav-analytics">
+                  <Button variant="ghost" className="transition-transform duration-200 hover:scale-105">Analytics</Button>
                 </Link>
+                {!walletAddress ? (
+                  <Button 
+                    onClick={connectWallet} 
+                    variant="outline" 
+                    size="sm"
+                    className="transition-transform duration-200 hover:scale-105"
+                    data-testid="connect-wallet-button"
+                  >
+                    <Wallet className="w-4 h-4 mr-2" />
+                    Connect Wallet
+                  </Button>
+                ) : (
+                  <Badge variant="default" className="font-mono text-xs">
+                    {walletAddress.substring(0, 6)}...{walletAddress.substring(38)}
+                  </Badge>
+                )}
                 <Button 
                   onClick={logout} 
                   variant="outline"
@@ -106,11 +234,9 @@ const Navbar = () => {
                 </Button>
               </>
             ) : (
-              <>
-                <Link to="/auth" data-testid="nav-auth">
-                  <Button className="rounded-full bg-primary hover:bg-primary/90 transition-all duration-200 hover:scale-105">Get Started</Button>
-                </Link>
-              </>
+              <Link to="/auth" data-testid="nav-auth">
+                <Button className="rounded-full bg-primary hover:bg-primary/90 transition-all duration-200 hover:scale-105">Get Started</Button>
+              </Link>
             )}
           </div>
         </div>
@@ -124,108 +250,136 @@ const LandingPage = () => {
   const { user } = useAuth();
 
   useEffect(() => {
-    if (user) navigate("/dashboard");
+    if (user) navigate("/marketplace");
   }, [user]);
 
   return (
     <div className="min-h-screen">
-      <section className="relative py-20 lg:py-32 overflow-hidden">
-        <div className="absolute inset-0 opacity-10">
-          <img 
-            src="https://images.pexels.com/photos/36397860/pexels-photo-36397860.jpeg" 
-            alt="Industrial recycling" 
-            className="w-full h-full object-cover"
-          />
+      <section className="relative py-20 lg:py-32 overflow-hidden bg-gradient-to-br from-background via-muted/20 to-background">
+        <div className="absolute inset-0 opacity-5">
+          <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzFBNEEzOCIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')] opacity-20" />
         </div>
         <div className="max-w-7xl mx-auto px-6 relative z-10">
-          <div className="max-w-3xl">
+          <div className="max-w-4xl mx-auto text-center">
+            <Badge variant="outline" className="mb-6 text-sm px-4 py-2">
+              <Sparkles className="w-4 h-4 mr-2 inline" />
+              Powered by AI & DeFi Technology
+            </Badge>
             <h1 className="text-5xl lg:text-7xl font-black font-heading text-primary tracking-tight leading-tight mb-6" data-testid="hero-title">
-              Transform Waste Into Worth
+              Transform Industrial Waste Into Valuable Assets
             </h1>
-            <p className="text-lg lg:text-xl text-muted-foreground mb-8 leading-relaxed">
-              Connect industries, recyclers, and farmers on a sustainable marketplace. Buy and sell industrial waste materials and crop residue for a cleaner, greener future.
+            <p className="text-lg lg:text-xl text-muted-foreground mb-8 leading-relaxed max-w-3xl mx-auto">
+              The world's first DeFi-enabled sustainable marketplace connecting industries, recyclers, and farmers. Trade waste materials with crypto payments, AI classification, and real-time impact tracking.
             </p>
-            <Button 
-              onClick={() => navigate("/auth")} 
-              size="lg" 
-              className="rounded-full bg-primary hover:bg-primary/90 text-lg px-8 py-6 transition-all duration-200 hover:scale-105 shadow-lg"
-              data-testid="hero-cta-button"
-            >
-              Start Trading
-            </Button>
+            <div className="flex flex-wrap gap-4 justify-center">
+              <Button 
+                onClick={() => navigate("/auth")} 
+                size="lg" 
+                className="rounded-full bg-primary hover:bg-primary/90 text-lg px-8 py-6 transition-all duration-200 hover:scale-105 shadow-lg"
+                data-testid="hero-cta-button"
+              >
+                <Store className="w-5 h-5 mr-2" />
+                Start Trading
+              </Button>
+              <Button 
+                onClick={() => navigate("/analytics")} 
+                size="lg" 
+                variant="outline"
+                className="rounded-full text-lg px-8 py-6 transition-all duration-200 hover:scale-105"
+                data-testid="hero-analytics-button"
+              >
+                <BarChart3 className="w-5 h-5 mr-2" />
+                View Analytics
+              </Button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="py-20 bg-white">
+        <div className="max-w-7xl mx-auto px-6">
+          <h2 className="text-4xl lg:text-5xl font-black font-heading text-center mb-4 text-primary">How It Works</h2>
+          <p className="text-center text-muted-foreground mb-16 max-w-2xl mx-auto">Three simple steps to start trading and making an environmental impact</p>
+          
+          <div className="grid md:grid-cols-3 gap-8">
+            <Card className="border-2 transition-all duration-200 hover:-translate-y-2 hover:shadow-xl relative" data-testid="feature-card-1">
+              <div className="absolute -top-4 left-6 bg-primary text-white w-8 h-8 rounded-full flex items-center justify-center font-bold">1</div>
+              <CardHeader className="pt-8">
+                <Factory className="w-12 h-12 text-primary mb-4" />
+                <CardTitle className="text-2xl font-heading">List Your Waste</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground">Upload detailed information, images, and set pricing in USD or ETH. Our AI will classify and optimize your listing.</p>
+              </CardContent>
+            </Card>
+            
+            <Card className="border-2 transition-all duration-200 hover:-translate-y-2 hover:shadow-xl relative" data-testid="feature-card-2">
+              <div className="absolute -top-4 left-6 bg-chart-2 text-primary w-8 h-8 rounded-full flex items-center justify-center font-bold">2</div>
+              <CardHeader className="pt-8">
+                <ShoppingCart className="w-12 h-12 text-chart-2 mb-4" />
+                <CardTitle className="text-2xl font-heading">Browse & Buy</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground">Search verified waste materials, view AI classifications, and purchase using traditional or crypto payments.</p>
+              </CardContent>
+            </Card>
+            
+            <Card className="border-2 transition-all duration-200 hover:-translate-y-2 hover:shadow-xl relative" data-testid="feature-card-3">
+              <div className="absolute -top-4 left-6 bg-accent text-white w-8 h-8 rounded-full flex items-center justify-center font-bold">3</div>
+              <CardHeader className="pt-8">
+                <TrendingUp className="w-12 h-12 text-accent mb-4" />
+                <CardTitle className="text-2xl font-heading">Track Impact</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground">Monitor your environmental contribution with real-time analytics showing CO2 saved, waste diverted, and more.</p>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </section>
 
       <section className="py-20 bg-muted/30">
         <div className="max-w-7xl mx-auto px-6">
-          <h2 className="text-4xl lg:text-5xl font-black font-heading text-center mb-16 text-primary">How It Works</h2>
-          <div className="grid md:grid-cols-3 gap-8">
-            <Card className="border-2 transition-all duration-200 hover:-translate-y-1 hover:shadow-md" data-testid="feature-card-1">
-              <CardHeader>
-                <Factory className="w-12 h-12 text-primary mb-4" />
-                <CardTitle className="text-2xl font-heading">List Your Waste</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">Industries and farmers can easily list their waste materials with photos, quantities, and pricing.</p>
-              </CardContent>
-            </Card>
-            
-            <Card className="border-2 transition-all duration-200 hover:-translate-y-1 hover:shadow-md" data-testid="feature-card-2">
-              <CardHeader>
-                <Sparkles className="w-12 h-12 text-accent mb-4" />
-                <CardTitle className="text-2xl font-heading">AI Classification</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">Our AI analyzes waste materials to determine recyclability, potential uses, and environmental impact.</p>
-              </CardContent>
-            </Card>
-            
-            <Card className="border-2 transition-all duration-200 hover:-translate-y-1 hover:shadow-md" data-testid="feature-card-3">
-              <CardHeader>
-                <TrendingUp className="w-12 h-12 text-chart-2 mb-4" />
-                <CardTitle className="text-2xl font-heading">Track Impact</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">Monitor CO2 savings, recycling stats, and your contribution to a sustainable future.</p>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </section>
-
-      <section className="py-20">
-        <div className="max-w-7xl mx-auto px-6">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div>
-              <img 
-                src="https://images.pexels.com/photos/916406/pexels-photo-916406.jpeg" 
-                alt="Farmer with crops" 
-                className="rounded-lg shadow-xl"
-              />
-            </div>
-            <div>
-              <h2 className="text-4xl lg:text-5xl font-black font-heading mb-6 text-primary">For Every Role</h2>
+              <Badge variant="outline" className="mb-4">DeFi Integration</Badge>
+              <h2 className="text-4xl lg:text-5xl font-black font-heading mb-6 text-primary">Decentralized Finance Meets Sustainability</h2>
               <div className="space-y-4">
                 <div className="flex gap-4">
-                  <Factory className="w-8 h-8 text-primary flex-shrink-0" />
+                  <Wallet className="w-8 h-8 text-chart-2 flex-shrink-0" />
                   <div>
-                    <h3 className="text-xl font-bold font-heading mb-2">Industries</h3>
-                    <p className="text-muted-foreground">Turn industrial waste into revenue while meeting sustainability goals.</p>
+                    <h3 className="text-xl font-bold font-heading mb-2">Crypto Payments</h3>
+                    <p className="text-muted-foreground">Pay with ETH or traditional USD. Connect your MetaMask wallet for seamless transactions.</p>
                   </div>
                 </div>
                 <div className="flex gap-4">
-                  <Recycle className="w-8 h-8 text-chart-2 flex-shrink-0" />
+                  <Shield className="w-8 h-8 text-primary flex-shrink-0" />
                   <div>
-                    <h3 className="text-xl font-bold font-heading mb-2">Recyclers</h3>
-                    <p className="text-muted-foreground">Access quality recyclable materials from verified sources.</p>
+                    <h3 className="text-xl font-bold font-heading mb-2">Secure & Transparent</h3>
+                    <p className="text-muted-foreground">All transactions are secure with blockchain verification and smart contract protection.</p>
                   </div>
                 </div>
                 <div className="flex gap-4">
-                  <Leaf className="w-8 h-8 text-accent flex-shrink-0" />
+                  <Sparkles className="w-8 h-8 text-accent flex-shrink-0" />
                   <div>
-                    <h3 className="text-xl font-bold font-heading mb-2">Farmers</h3>
-                    <p className="text-muted-foreground">Monetize crop residue and contribute to circular economy.</p>
+                    <h3 className="text-xl font-bold font-heading mb-2">AI-Powered</h3>
+                    <p className="text-muted-foreground">Get instant waste classification, market pricing, and 24/7 AI assistant support.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="relative">
+              <img 
+                src="https://images.pexels.com/photos/36397860/pexels-photo-36397860.jpeg" 
+                alt="Industrial recycling" 
+                className="rounded-lg shadow-2xl"
+              />
+              <div className="absolute -bottom-6 -left-6 bg-white p-6 rounded-lg shadow-xl border-2">
+                <div className="flex items-center gap-3">
+                  <CheckCircle2 className="w-8 h-8 text-chart-1" />
+                  <div>
+                    <p className="font-bold font-heading">100% Verified</p>
+                    <p className="text-sm text-muted-foreground">All listings AI-validated</p>
                   </div>
                 </div>
               </div>
@@ -243,7 +397,6 @@ const AuthPage = () => {
     email: "",
     password: "",
     name: "",
-    role: "industry",
     company_name: "",
     location: ""
   });
@@ -258,46 +411,37 @@ const AuthPage = () => {
       const response = await axios.post(`${API}${endpoint}`, payload);
       login(response.data.token, response.data.user);
       toast.success(isLogin ? "Welcome back!" : "Account created successfully!");
-      navigate("/dashboard");
+      navigate("/marketplace");
     } catch (error) {
       toast.error(error.response?.data?.detail || "Authentication failed");
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center py-12 px-6 bg-muted/20">
-      <Card className="w-full max-w-md border-2 shadow-lg" data-testid="auth-card">
-        <CardHeader>
-          <CardTitle className="text-3xl font-black font-heading text-center">{isLogin ? "Welcome Back" : "Join EcoMarket"}</CardTitle>
-          <CardDescription className="text-center">Start trading for a sustainable future</CardDescription>
+    <div className="min-h-screen flex items-center justify-center py-12 px-6" style={{background: "linear-gradient(135deg, #FDFDFC 0%, #F4F5F4 100%)"}}>
+      <Card className="w-full max-w-md border-2 shadow-2xl" data-testid="auth-card">
+        <CardHeader className="space-y-2">
+          <CardTitle className="text-3xl font-black font-heading text-center text-primary">
+            {isLogin ? "Welcome Back" : "Join EcoMarket"}
+          </CardTitle>
+          <CardDescription className="text-center">
+            {isLogin ? "Sign in to continue trading" : "Create your account to start trading"}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             {!isLogin && (
               <>
                 <div>
-                  <Label htmlFor="name">Full Name</Label>
+                  <Label htmlFor="name">Full Name *</Label>
                   <Input 
                     id="name" 
                     data-testid="auth-name-input"
                     value={formData.name} 
                     onChange={(e) => setFormData({...formData, name: e.target.value})} 
                     required={!isLogin}
+                    placeholder="John Doe"
                   />
-                </div>
-                <div>
-                  <Label htmlFor="role">Role</Label>
-                  <Select value={formData.role} onValueChange={(val) => setFormData({...formData, role: val})}>
-                    <SelectTrigger data-testid="auth-role-select">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="industry">Industry</SelectItem>
-                      <SelectItem value="recycler">Recycler</SelectItem>
-                      <SelectItem value="buyer">Buyer</SelectItem>
-                      <SelectItem value="seller">Seller / Farmer</SelectItem>
-                    </SelectContent>
-                  </Select>
                 </div>
                 <div>
                   <Label htmlFor="company_name">Company Name (Optional)</Label>
@@ -306,22 +450,24 @@ const AuthPage = () => {
                     data-testid="auth-company-input"
                     value={formData.company_name} 
                     onChange={(e) => setFormData({...formData, company_name: e.target.value})} 
+                    placeholder="Acme Industries"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="location">Location</Label>
+                  <Label htmlFor="location">Location *</Label>
                   <Input 
                     id="location" 
                     data-testid="auth-location-input"
                     value={formData.location} 
                     onChange={(e) => setFormData({...formData, location: e.target.value})} 
                     required={!isLogin}
+                    placeholder="New York, USA"
                   />
                 </div>
               </>
             )}
             <div>
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">Email *</Label>
               <Input 
                 id="email" 
                 type="email" 
@@ -329,10 +475,11 @@ const AuthPage = () => {
                 value={formData.email} 
                 onChange={(e) => setFormData({...formData, email: e.target.value})} 
                 required
+                placeholder="you@company.com"
               />
             </div>
             <div>
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">Password *</Label>
               <Input 
                 id="password" 
                 type="password" 
@@ -340,10 +487,11 @@ const AuthPage = () => {
                 value={formData.password} 
                 onChange={(e) => setFormData({...formData, password: e.target.value})} 
                 required
+                placeholder="••••••••"
               />
             </div>
             <Button type="submit" className="w-full rounded-full" data-testid="auth-submit-button">
-              {isLogin ? "Login" : "Create Account"}
+              {isLogin ? "Sign In" : "Create Account"}
             </Button>
           </form>
         </CardContent>
@@ -353,7 +501,7 @@ const AuthPage = () => {
             className="text-sm text-muted-foreground hover:text-primary transition-colors duration-200"
             data-testid="auth-toggle-button"
           >
-            {isLogin ? "Don't have an account? Sign up" : "Already have an account? Login"}
+            {isLogin ? "Don't have an account? Sign up" : "Already have an account? Sign in"}
           </button>
         </CardFooter>
       </Card>
@@ -361,147 +509,23 @@ const AuthPage = () => {
   );
 };
 
-const Dashboard = () => {
-  const { user } = useAuth();
-  const [myListings, setMyListings] = useState([]);
-  const [impact, setImpact] = useState(null);
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    fetchMyListings();
-    fetchImpact();
-  }, []);
-
-  const fetchMyListings = async () => {
-    try {
-      const response = await axios.get(`${API}/listings/my`);
-      setMyListings(response.data);
-    } catch (error) {
-      console.error("Failed to fetch listings", error);
-    }
-  };
-
-  const fetchImpact = async () => {
-    try {
-      const response = await axios.get(`${API}/impact`);
-      setImpact(response.data);
-    } catch (error) {
-      console.error("Failed to fetch impact", error);
-    }
-  };
-
-  return (
-    <div className="min-h-screen py-12 px-6">
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-4xl lg:text-5xl font-black font-heading text-primary mb-2" data-testid="dashboard-title">Welcome, {user?.name}</h1>
-          <p className="text-muted-foreground">Role: <Badge variant="outline" className="ml-2">{user?.role}</Badge></p>
-        </div>
-
-        {impact && (
-          <div className="grid md:grid-cols-4 gap-6 mb-12">
-            <Card className="border-2" data-testid="impact-card-co2">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-muted-foreground">CO2 Saved</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-black font-heading text-chart-1">{impact.co2_saved_kg} kg</div>
-              </CardContent>
-            </Card>
-            <Card className="border-2" data-testid="impact-card-items">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Items Recycled</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-black font-heading text-primary">{impact.items_recycled}</div>
-              </CardContent>
-            </Card>
-            <Card className="border-2" data-testid="impact-card-waste">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Waste Diverted</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-black font-heading text-accent">{impact.waste_diverted_kg} kg</div>
-              </CardContent>
-            </Card>
-            <Card className="border-2" data-testid="impact-card-trees">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Trees Saved</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-black font-heading text-chart-2">{impact.trees_saved}</div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-3xl font-black font-heading text-primary">My Listings</h2>
-          <Button 
-            onClick={() => navigate("/create-listing")} 
-            className="rounded-full bg-primary hover:bg-primary/90 transition-all duration-200 hover:scale-105"
-            data-testid="create-listing-button"
-          >
-            <Upload className="w-4 h-4 mr-2" />
-            Create Listing
-          </Button>
-        </div>
-
-        {myListings.length === 0 ? (
-          <Card className="border-2" data-testid="no-listings-card">
-            <CardContent className="py-12 text-center">
-              <Package className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground">You haven't created any listings yet.</p>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {myListings.map((listing) => (
-              <Card key={listing.id} className="border-2 transition-all duration-200 hover:-translate-y-1 hover:shadow-md cursor-pointer" onClick={() => navigate(`/listing/${listing.id}`)} data-testid={`listing-card-${listing.id}`}>
-                {listing.images.length > 0 && (
-                  <img 
-                    src={`${API}/files/${listing.images[0]}?auth=${localStorage.getItem("token")}`} 
-                    alt={listing.title} 
-                    className="w-full h-48 object-cover rounded-t-lg"
-                  />
-                )}
-                <CardHeader>
-                  <CardTitle className="font-heading">{listing.title}</CardTitle>
-                  <CardDescription className="line-clamp-2">{listing.description}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between">
-                    <Badge variant="outline">{listing.waste_type}</Badge>
-                    <span className="text-lg font-bold text-primary">${listing.price}</span>
-                  </div>
-                  <div className="mt-2 text-sm text-muted-foreground">
-                    {listing.quantity} {listing.unit}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
-
 const Marketplace = () => {
   const [listings, setListings] = useState([]);
+  const [myListings, setMyListings] = useState([]);
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState("");
   const navigate = useNavigate();
 
   useEffect(() => {
     fetchListings();
+    fetchMyListings();
   }, [search, filterType]);
 
   const fetchListings = async () => {
     try {
       const params = {};
       if (search) params.search = search;
-      if (filterType) params.waste_type = filterType;
+      if (filterType && filterType !== "all") params.waste_type = filterType;
       const response = await axios.get(`${API}/listings`, { params });
       setListings(response.data);
     } catch (error) {
@@ -509,98 +533,186 @@ const Marketplace = () => {
     }
   };
 
-  return (
-    <div className="min-h-screen py-12 px-6">
-      <div className="max-w-7xl mx-auto">
-        <h1 className="text-4xl lg:text-5xl font-black font-heading text-primary mb-8" data-testid="marketplace-title">Marketplace</h1>
-        
-        <div className="flex flex-col md:flex-row gap-4 mb-8">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
-            <Input 
-              placeholder="Search waste materials..." 
-              value={search} 
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-10"
-              data-testid="marketplace-search-input"
-            />
-          </div>
-          <Select value={filterType} onValueChange={setFilterType}>
-            <SelectTrigger className="md:w-64" data-testid="marketplace-filter-select">
-              <SelectValue placeholder="Filter by type" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Types</SelectItem>
-              <SelectItem value="metal">Metal</SelectItem>
-              <SelectItem value="plastic">Plastic</SelectItem>
-              <SelectItem value="chemical">Chemical</SelectItem>
-              <SelectItem value="e-waste">E-Waste</SelectItem>
-              <SelectItem value="crop-residue">Crop Residue</SelectItem>
-              <SelectItem value="other">Other</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+  const fetchMyListings = async () => {
+    try {
+      const response = await axios.get(`${API}/listings/my`);
+      setMyListings(response.data);
+    } catch (error) {
+      console.error("Failed to fetch my listings", error);
+    }
+  };
 
-        {listings.length === 0 ? (
-          <Card className="border-2" data-testid="no-marketplace-listings">
-            <CardContent className="py-12 text-center">
-              <Package className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground">No listings found.</p>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {listings.map((listing) => (
-              <Card 
-                key={listing.id} 
-                className="border-2 transition-all duration-200 hover:-translate-y-1 hover:shadow-md cursor-pointer" 
-                onClick={() => navigate(`/listing/${listing.id}`)}
-                data-testid={`marketplace-listing-card-${listing.id}`}
-              >
-                {listing.images.length > 0 && (
-                  <img 
-                    src={`${API}/files/${listing.images[0]}?auth=${localStorage.getItem("token")}`} 
-                    alt={listing.title} 
-                    className="w-full h-48 object-cover rounded-t-lg"
-                  />
-                )}
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <CardTitle className="font-heading flex-1">{listing.title}</CardTitle>
-                    <Badge 
-                      variant={listing.status === "available" ? "default" : "secondary"}
-                      className="ml-2"
-                    >
-                      {listing.status}
-                    </Badge>
-                  </div>
-                  <CardDescription className="line-clamp-2">{listing.description}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Badge variant="outline">{listing.waste_type}</Badge>
-                      <span className="text-xl font-black font-heading text-primary">${listing.price}</span>
-                    </div>
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <Package className="w-4 h-4" />
-                        {listing.quantity} {listing.unit}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <MapPin className="w-4 h-4" />
-                        {listing.location}
-                      </span>
-                    </div>
-                    <div className="text-xs text-muted-foreground pt-2 border-t">
-                      Seller: {listing.seller_name}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+  const ListingCard = ({ listing, isMine = false }) => (
+    <Card 
+      className="border-2 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg cursor-pointer overflow-hidden" 
+      onClick={() => navigate(`/listing/${listing.id}`)}
+      data-testid={`listing-card-${listing.id}`}
+    >
+      {listing.images.length > 0 ? (
+        <div className="relative h-48 w-full overflow-hidden">
+          <img 
+            src={`${API}/files/${listing.images[0]}?auth=${localStorage.getItem("token")}`} 
+            alt={listing.title} 
+            className="w-full h-full object-cover transition-transform duration-300 hover:scale-110"
+          />
+          <Badge className="absolute top-3 right-3" variant={listing.status === "available" ? "default" : "secondary"}>
+            {listing.status}
+          </Badge>
+        </div>
+      ) : (
+        <div className="h-48 w-full bg-muted flex items-center justify-center">
+          <Package className="w-16 h-16 text-muted-foreground" />
+        </div>
+      )}
+      
+      <CardHeader className="pb-3">
+        <div className="flex items-start justify-between gap-2">
+          <CardTitle className="font-heading text-lg line-clamp-1">{listing.title}</CardTitle>
+          {listing.ai_classification && (
+            <Sparkles className="w-5 h-5 text-accent flex-shrink-0" />
+          )}
+        </div>
+        <CardDescription className="line-clamp-2 text-sm">{listing.description}</CardDescription>
+      </CardHeader>
+      
+      <CardContent className="space-y-3">
+        <div className="flex items-center justify-between">
+          <Badge variant="outline" className="text-xs">{listing.waste_type}</Badge>
+          <div className="text-right">
+            <div className="text-xl font-black font-heading text-primary">${listing.price_usd}</div>
+            {listing.price_eth && (
+              <div className="text-xs text-muted-foreground">{listing.price_eth} ETH</div>
+            )}
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-2 gap-2 text-sm text-muted-foreground">
+          <div className="flex items-center gap-1">
+            <Package className="w-4 h-4" />
+            <span className="truncate">{listing.quantity} {listing.unit}</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <MapPin className="w-4 h-4" />
+            <span className="truncate">{listing.location}</span>
+          </div>
+        </div>
+        
+        {listing.purity_percentage && (
+          <div className="flex items-center gap-2 text-xs">
+            <span className="text-muted-foreground">Purity:</span>
+            <Badge variant="outline" className="text-xs">{listing.purity_percentage}%</Badge>
           </div>
         )}
+        
+        {!isMine && (
+          <div className="pt-2 border-t text-xs text-muted-foreground">
+            Seller: <span className="font-semibold">{listing.seller_name}</span>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+
+  return (
+    <div className="min-h-screen py-12 px-6 bg-gradient-to-b from-background to-muted/20">
+      <div className="max-w-7xl mx-auto">
+        <div className="mb-8">
+          <h1 className="text-4xl lg:text-5xl font-black font-heading text-primary mb-3" data-testid="marketplace-title">
+            Marketplace
+          </h1>
+          <p className="text-muted-foreground text-lg">Buy and sell verified waste materials</p>
+        </div>
+
+        <Tabs defaultValue="buy" className="w-full" data-testid="marketplace-tabs">
+          <TabsList className="grid w-full max-w-md grid-cols-2 mb-8">
+            <TabsTrigger value="buy" className="text-base" data-testid="buy-tab">
+              <ShoppingCart className="w-4 h-4 mr-2" />
+              Buy
+            </TabsTrigger>
+            <TabsTrigger value="sell" className="text-base" data-testid="sell-tab">
+              <Store className="w-4 h-4 mr-2" />
+              My Listings
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="buy" className="space-y-6">
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
+                <Input 
+                  placeholder="Search waste materials..." 
+                  value={search} 
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-10"
+                  data-testid="marketplace-search-input"
+                />
+              </div>
+              <Select value={filterType} onValueChange={setFilterType}>
+                <SelectTrigger className="md:w-64" data-testid="marketplace-filter-select">
+                  <SelectValue placeholder="Filter by type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="metal">Metal</SelectItem>
+                  <SelectItem value="plastic">Plastic</SelectItem>
+                  <SelectItem value="chemical">Chemical</SelectItem>
+                  <SelectItem value="e-waste">E-Waste</SelectItem>
+                  <SelectItem value="crop-residue">Crop Residue</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {listings.length === 0 ? (
+              <Card className="border-2" data-testid="no-marketplace-listings">
+                <CardContent className="py-20 text-center">
+                  <Package className="w-20 h-20 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-xl font-bold font-heading mb-2">No listings found</h3>
+                  <p className="text-muted-foreground">Try adjusting your search or filters</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {listings.map((listing) => (
+                  <ListingCard key={listing.id} listing={listing} />
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="sell" className="space-y-6">
+            <div className="flex justify-between items-center">
+              <p className="text-muted-foreground">Manage your listings and track performance</p>
+              <Button 
+                onClick={() => navigate("/create-listing")} 
+                className="rounded-full bg-primary hover:bg-primary/90"
+                data-testid="create-listing-button"
+              >
+                <Upload className="w-4 h-4 mr-2" />
+                Create Listing
+              </Button>
+            </div>
+
+            {myListings.length === 0 ? (
+              <Card className="border-2" data-testid="no-my-listings">
+                <CardContent className="py-20 text-center">
+                  <Store className="w-20 h-20 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-xl font-bold font-heading mb-2">You haven't created any listings yet</h3>
+                  <p className="text-muted-foreground mb-6">Start selling waste materials and contribute to sustainability</p>
+                  <Button onClick={() => navigate("/create-listing")} data-testid="create-first-listing-button">
+                    Create Your First Listing
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {myListings.map((listing) => (
+                  <ListingCard key={listing.id} listing={listing} isMine={true} />
+                ))}
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
@@ -613,9 +725,16 @@ const CreateListing = () => {
     waste_type: "metal",
     quantity: "",
     unit: "kg",
-    price: "",
+    price_usd: "",
+    price_eth: "",
     location: "",
-    images: []
+    images: [],
+    material_composition: "",
+    certifications: "",
+    pickup_available: true,
+    delivery_available: false,
+    min_order_quantity: "",
+    purity_percentage: ""
   });
   const [uploading, setUploading] = useState(false);
   const navigate = useNavigate();
@@ -628,9 +747,7 @@ const CreateListing = () => {
       const uploadPromises = files.map(async (file) => {
         const formDataUpload = new FormData();
         formDataUpload.append("file", file);
-        const response = await axios.post(`${API}/upload`, formDataUpload, {
-          headers: { "Content-Type": "multipart/form-data" }
-        });
+        const response = await axios.post(`${API}/upload`, formDataUpload);
         return response.data.path;
       });
       
@@ -647,10 +764,16 @@ const CreateListing = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      const certArray = formData.certifications.split(",").map(c => c.trim()).filter(c => c);
+      
       const response = await axios.post(`${API}/listings`, {
         ...formData,
         quantity: parseFloat(formData.quantity),
-        price: parseFloat(formData.price)
+        price_usd: parseFloat(formData.price_usd),
+        price_eth: formData.price_eth ? parseFloat(formData.price_eth) : null,
+        min_order_quantity: formData.min_order_quantity ? parseFloat(formData.min_order_quantity) : null,
+        purity_percentage: formData.purity_percentage ? parseFloat(formData.purity_percentage) : null,
+        certifications: certArray
       });
       toast.success("Listing created successfully");
       navigate(`/listing/${response.data.id}`);
@@ -660,130 +783,244 @@ const CreateListing = () => {
   };
 
   return (
-    <div className="min-h-screen py-12 px-6">
-      <div className="max-w-3xl mx-auto">
-        <h1 className="text-4xl lg:text-5xl font-black font-heading text-primary mb-8" data-testid="create-listing-title">Create Listing</h1>
+    <div className="min-h-screen py-12 px-6 bg-gradient-to-b from-background to-muted/20">
+      <div className="max-w-4xl mx-auto">
+        <div className="mb-8">
+          <h1 className="text-4xl lg:text-5xl font-black font-heading text-primary mb-3" data-testid="create-listing-title">
+            Create Listing
+          </h1>
+          <p className="text-muted-foreground text-lg">Add detailed information about your waste material</p>
+        </div>
         
-        <Card className="border-2">
-          <CardContent className="pt-6">
+        <Card className="border-2 shadow-lg">
+          <CardContent className="pt-8">
             <form onSubmit={handleSubmit} className="space-y-6">
-              <div>
-                <Label htmlFor="title">Title</Label>
-                <Input 
-                  id="title" 
-                  data-testid="listing-title-input"
-                  value={formData.title} 
-                  onChange={(e) => setFormData({...formData, title: e.target.value})} 
-                  required
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="description">Description</Label>
-                <Textarea 
-                  id="description" 
-                  data-testid="listing-description-input"
-                  rows={4}
-                  value={formData.description} 
-                  onChange={(e) => setFormData({...formData, description: e.target.value})} 
-                  required
-                />
-              </div>
-              
-              <div className="grid md:grid-cols-2 gap-4">
+              <div className="space-y-4">
+                <h3 className="text-lg font-bold font-heading text-primary">Basic Information</h3>
+                
                 <div>
-                  <Label htmlFor="waste_type">Waste Type</Label>
-                  <Select value={formData.waste_type} onValueChange={(val) => setFormData({...formData, waste_type: val})}>
-                    <SelectTrigger data-testid="listing-waste-type-select">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="metal">Metal</SelectItem>
-                      <SelectItem value="plastic">Plastic</SelectItem>
-                      <SelectItem value="chemical">Chemical</SelectItem>
-                      <SelectItem value="e-waste">E-Waste</SelectItem>
-                      <SelectItem value="crop-residue">Crop Residue</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="title">Listing Title *</Label>
+                  <Input 
+                    id="title" 
+                    data-testid="listing-title-input"
+                    value={formData.title} 
+                    onChange={(e) => setFormData({...formData, title: e.target.value})} 
+                    required
+                    placeholder="e.g., High-Grade Steel Scrap"
+                  />
                 </div>
                 
                 <div>
-                  <Label htmlFor="location">Location</Label>
+                  <Label htmlFor="description">Description *</Label>
+                  <Textarea 
+                    id="description" 
+                    data-testid="listing-description-input"
+                    rows={4}
+                    value={formData.description} 
+                    onChange={(e) => setFormData({...formData, description: e.target.value})} 
+                    required
+                    placeholder="Detailed description of the waste material, its condition, and any relevant details..."
+                  />
+                </div>
+                
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="waste_type">Waste Type *</Label>
+                    <Select value={formData.waste_type} onValueChange={(val) => setFormData({...formData, waste_type: val})}>
+                      <SelectTrigger data-testid="listing-waste-type-select">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="metal">Metal</SelectItem>
+                        <SelectItem value="plastic">Plastic</SelectItem>
+                        <SelectItem value="chemical">Chemical</SelectItem>
+                        <SelectItem value="e-waste">E-Waste</SelectItem>
+                        <SelectItem value="crop-residue">Crop Residue</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="material_composition">Material Composition</Label>
+                    <Input 
+                      id="material_composition" 
+                      data-testid="listing-composition-input"
+                      value={formData.material_composition} 
+                      onChange={(e) => setFormData({...formData, material_composition: e.target.value})} 
+                      placeholder="e.g., 95% Steel, 5% Aluminum"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4 pt-6 border-t">
+                <h3 className="text-lg font-bold font-heading text-primary">Quantity & Pricing</h3>
+                
+                <div className="grid md:grid-cols-3 gap-4">
+                  <div>
+                    <Label htmlFor="quantity">Quantity *</Label>
+                    <Input 
+                      id="quantity" 
+                      type="number" 
+                      step="0.01"
+                      data-testid="listing-quantity-input"
+                      value={formData.quantity} 
+                      onChange={(e) => setFormData({...formData, quantity: e.target.value})} 
+                      required
+                      placeholder="100"
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="unit">Unit *</Label>
+                    <Select value={formData.unit} onValueChange={(val) => setFormData({...formData, unit: val})}>
+                      <SelectTrigger data-testid="listing-unit-select">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="kg">kg</SelectItem>
+                        <SelectItem value="ton">ton</SelectItem>
+                        <SelectItem value="lbs">lbs</SelectItem>
+                        <SelectItem value="units">units</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="min_order_quantity">Min Order Quantity</Label>
+                    <Input 
+                      id="min_order_quantity" 
+                      type="number" 
+                      step="0.01"
+                      data-testid="listing-min-order-input"
+                      value={formData.min_order_quantity} 
+                      onChange={(e) => setFormData({...formData, min_order_quantity: e.target.value})} 
+                      placeholder="10"
+                    />
+                  </div>
+                </div>
+                
+                <div className="grid md:grid-cols-3 gap-4">
+                  <div>
+                    <Label htmlFor="price_usd">Price (USD) *</Label>
+                    <Input 
+                      id="price_usd" 
+                      type="number" 
+                      step="0.01"
+                      data-testid="listing-price-input"
+                      value={formData.price_usd} 
+                      onChange={(e) => setFormData({...formData, price_usd: e.target.value})} 
+                      required
+                      placeholder="500.00"
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="price_eth">Price (ETH)</Label>
+                    <Input 
+                      id="price_eth" 
+                      type="number" 
+                      step="0.0001"
+                      data-testid="listing-price-eth-input"
+                      value={formData.price_eth} 
+                      onChange={(e) => setFormData({...formData, price_eth: e.target.value})} 
+                      placeholder="0.15"
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="purity_percentage">Purity %</Label>
+                    <Input 
+                      id="purity_percentage" 
+                      type="number" 
+                      step="0.1"
+                      max="100"
+                      data-testid="listing-purity-input"
+                      value={formData.purity_percentage} 
+                      onChange={(e) => setFormData({...formData, purity_percentage: e.target.value})} 
+                      placeholder="95.5"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4 pt-6 border-t">
+                <h3 className="text-lg font-bold font-heading text-primary">Location & Logistics</h3>
+                
+                <div>
+                  <Label htmlFor="location">Location *</Label>
                   <Input 
                     id="location" 
                     data-testid="listing-location-input"
                     value={formData.location} 
                     onChange={(e) => setFormData({...formData, location: e.target.value})} 
                     required
+                    placeholder="City, State/Country"
                   />
                 </div>
+                
+                <div className="flex gap-6">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      checked={formData.pickup_available}
+                      onChange={(e) => setFormData({...formData, pickup_available: e.target.checked})}
+                      className="w-4 h-4"
+                    />
+                    <span className="text-sm">Pickup Available</span>
+                  </label>
+                  
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      checked={formData.delivery_available}
+                      onChange={(e) => setFormData({...formData, delivery_available: e.target.checked})}
+                      className="w-4 h-4"
+                    />
+                    <span className="text-sm">Delivery Available</span>
+                  </label>
+                </div>
               </div>
-              
-              <div className="grid md:grid-cols-3 gap-4">
+
+              <div className="space-y-4 pt-6 border-t">
+                <h3 className="text-lg font-bold font-heading text-primary">Additional Information</h3>
+                
                 <div>
-                  <Label htmlFor="quantity">Quantity</Label>
+                  <Label htmlFor="certifications">Certifications (comma-separated)</Label>
                   <Input 
-                    id="quantity" 
-                    type="number" 
-                    step="0.01"
-                    data-testid="listing-quantity-input"
-                    value={formData.quantity} 
-                    onChange={(e) => setFormData({...formData, quantity: e.target.value})} 
-                    required
+                    id="certifications" 
+                    data-testid="listing-certifications-input"
+                    value={formData.certifications} 
+                    onChange={(e) => setFormData({...formData, certifications: e.target.value})} 
+                    placeholder="ISO 9001, EPA Certified"
                   />
                 </div>
                 
                 <div>
-                  <Label htmlFor="unit">Unit</Label>
-                  <Select value={formData.unit} onValueChange={(val) => setFormData({...formData, unit: val})}>
-                    <SelectTrigger data-testid="listing-unit-select">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="kg">kg</SelectItem>
-                      <SelectItem value="ton">ton</SelectItem>
-                      <SelectItem value="lbs">lbs</SelectItem>
-                      <SelectItem value="units">units</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div>
-                  <Label htmlFor="price">Price ($)</Label>
+                  <Label htmlFor="images">Upload Images</Label>
                   <Input 
-                    id="price" 
-                    type="number" 
-                    step="0.01"
-                    data-testid="listing-price-input"
-                    value={formData.price} 
-                    onChange={(e) => setFormData({...formData, price: e.target.value})} 
-                    required
+                    id="images" 
+                    type="file" 
+                    accept="image/*" 
+                    multiple
+                    data-testid="listing-image-input"
+                    onChange={handleImageUpload}
+                    disabled={uploading}
                   />
+                  <p className="text-xs text-muted-foreground mt-1">Upload high-quality images of your waste material</p>
+                  {formData.images.length > 0 && (
+                    <div className="mt-4 grid grid-cols-4 gap-2">
+                      {formData.images.map((img, idx) => (
+                        <img key={idx} src={`${API}/files/${img}?auth=${localStorage.getItem("token")}`} alt="Preview" className="w-full h-24 object-cover rounded border-2" />
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
               
-              <div>
-                <Label htmlFor="images">Images</Label>
-                <Input 
-                  id="images" 
-                  type="file" 
-                  accept="image/*" 
-                  multiple
-                  data-testid="listing-image-input"
-                  onChange={handleImageUpload}
-                  disabled={uploading}
-                />
-                {formData.images.length > 0 && (
-                  <div className="mt-4 flex gap-2 flex-wrap">
-                    {formData.images.map((img, idx) => (
-                      <img key={idx} src={`${API}/files/${img}?auth=${localStorage.getItem("token")}`} alt="Preview" className="w-20 h-20 object-cover rounded" />
-                    ))}
-                  </div>
-                )}
-              </div>
-              
-              <Button type="submit" className="w-full rounded-full" data-testid="listing-submit-button">
+              <Button type="submit" className="w-full rounded-full py-6 text-lg" data-testid="listing-submit-button">
+                <Upload className="w-5 h-5 mr-2" />
                 Create Listing
               </Button>
             </form>
@@ -829,9 +1066,11 @@ const ListingDetail = () => {
 
   if (!listing) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
 
+  const isMine = user && listing.seller_id === user.id;
+
   return (
-    <div className="min-h-screen py-12 px-6">
-      <div className="max-w-5xl mx-auto">
+    <div className="min-h-screen py-12 px-6 bg-gradient-to-b from-background to-muted/20">
+      <div className="max-w-6xl mx-auto">
         <Button 
           variant="ghost" 
           onClick={() => navigate(-1)} 
@@ -841,15 +1080,29 @@ const ListingDetail = () => {
           ← Back
         </Button>
         
-        <div className="grid lg:grid-cols-2 gap-8">
-          <div>
+        <div className="grid lg:grid-cols-2 gap-8 mb-8">
+          <div className="space-y-4">
             {listing.images.length > 0 ? (
-              <img 
-                src={`${API}/files/${listing.images[0]}?auth=${localStorage.getItem("token")}`} 
-                alt={listing.title} 
-                className="w-full h-96 object-cover rounded-lg shadow-lg"
-                data-testid="listing-detail-image"
-              />
+              <>
+                <img 
+                  src={`${API}/files/${listing.images[0]}?auth=${localStorage.getItem("token")}`} 
+                  alt={listing.title} 
+                  className="w-full h-96 object-cover rounded-lg shadow-xl border-2"
+                  data-testid="listing-detail-image"
+                />
+                {listing.images.length > 1 && (
+                  <div className="grid grid-cols-4 gap-2">
+                    {listing.images.slice(1).map((img, idx) => (
+                      <img 
+                        key={idx}
+                        src={`${API}/files/${img}?auth=${localStorage.getItem("token")}`} 
+                        alt={`${listing.title} ${idx + 2}`} 
+                        className="w-full h-24 object-cover rounded border-2 cursor-pointer hover:border-primary transition-colors"
+                      />
+                    ))}
+                  </div>
+                )}
+              </>
             ) : (
               <div className="w-full h-96 bg-muted rounded-lg flex items-center justify-center">
                 <Package className="w-24 h-24 text-muted-foreground" />
@@ -857,85 +1110,178 @@ const ListingDetail = () => {
             )}
           </div>
           
-          <div>
-            <div className="flex items-start justify-between mb-4">
-              <h1 className="text-4xl font-black font-heading text-primary" data-testid="listing-detail-title">{listing.title}</h1>
-              <Badge variant={listing.status === "available" ? "default" : "secondary"}>{listing.status}</Badge>
+          <div className="space-y-6">
+            <div>
+              <div className="flex items-start justify-between mb-3">
+                <h1 className="text-4xl font-black font-heading text-primary" data-testid="listing-detail-title">{listing.title}</h1>
+                <Badge variant={listing.status === "available" ? "default" : "secondary"} className="text-sm">
+                  {listing.status}
+                </Badge>
+              </div>
+              
+              <div className="flex items-baseline gap-3 mb-4">
+                <span className="text-4xl font-black font-heading text-primary">${listing.price_usd}</span>
+                {listing.price_eth && (
+                  <span className="text-lg text-muted-foreground">{listing.price_eth} ETH</span>
+                )}
+              </div>
+              
+              <div className="flex items-center gap-2 mb-6">
+                <Badge variant="outline">{listing.waste_type}</Badge>
+                {listing.purity_percentage && (
+                  <Badge variant="outline">{listing.purity_percentage}% Purity</Badge>
+                )}
+              </div>
             </div>
             
-            <div className="text-3xl font-black font-heading text-primary mb-6">${listing.price}</div>
-            
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Package className="w-5 h-5" />
-                <span>{listing.quantity} {listing.unit}</span>
-              </div>
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <MapPin className="w-5 h-5" />
-                <span>{listing.location}</span>
+            <div className="grid grid-cols-2 gap-4 py-4 border-y">
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">Quantity</p>
+                <p className="font-bold font-heading">{listing.quantity} {listing.unit}</p>
               </div>
               <div>
-                <Badge variant="outline">{listing.waste_type}</Badge>
+                <p className="text-sm text-muted-foreground mb-1">Location</p>
+                <p className="font-bold font-heading flex items-center gap-1">
+                  <MapPin className="w-4 h-4" />
+                  {listing.location}
+                </p>
               </div>
+              {listing.min_order_quantity && (
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Min Order</p>
+                  <p className="font-bold font-heading">{listing.min_order_quantity} {listing.unit}</p>
+                </div>
+              )}
+              {listing.material_composition && (
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Composition</p>
+                  <p className="font-bold font-heading text-sm">{listing.material_composition}</p>
+                </div>
+              )}
             </div>
             
-            <div className="mt-6 pt-6 border-t">
-              <h3 className="text-xl font-bold font-heading mb-2">Description</h3>
-              <p className="text-muted-foreground" data-testid="listing-detail-description">{listing.description}</p>
+            <div>
+              <h3 className="text-lg font-bold font-heading mb-2">Description</h3>
+              <p className="text-muted-foreground leading-relaxed" data-testid="listing-detail-description">{listing.description}</p>
             </div>
             
-            <div className="mt-6 pt-6 border-t">
-              <p className="text-sm text-muted-foreground">Seller: <span className="font-semibold">{listing.seller_name}</span></p>
+            {listing.certifications && listing.certifications.length > 0 && (
+              <div>
+                <h3 className="text-lg font-bold font-heading mb-2">Certifications</h3>
+                <div className="flex flex-wrap gap-2">
+                  {listing.certifications.map((cert, idx) => (
+                    <Badge key={idx} variant="outline" className="flex items-center gap-1">
+                      <Shield className="w-3 h-3" />
+                      {cert}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            <div className="flex gap-2 text-sm">
+              {listing.pickup_available && (
+                <Badge variant="secondary" className="flex items-center gap-1">
+                  <CheckCircle2 className="w-3 h-3" />
+                  Pickup Available
+                </Badge>
+              )}
+              {listing.delivery_available && (
+                <Badge variant="secondary" className="flex items-center gap-1">
+                  <CheckCircle2 className="w-3 h-3" />
+                  Delivery Available
+                </Badge>
+              )}
             </div>
             
-            {user && listing.seller_id === user.id && !listing.ai_classification && (
+            <div className="pt-4 border-t">
+              <p className="text-sm text-muted-foreground">
+                Seller: <span className="font-semibold text-foreground">{listing.seller_name}</span>
+              </p>
+              {listing.seller_wallet && (
+                <p className="text-xs text-muted-foreground font-mono mt-1">
+                  Wallet: {listing.seller_wallet.substring(0, 10)}...{listing.seller_wallet.substring(32)}
+                </p>
+              )}
+            </div>
+            
+            {isMine && !listing.ai_classification && (
               <Button 
                 onClick={handleClassify} 
                 disabled={classifying}
-                className="mt-6 rounded-full w-full"
+                className="w-full rounded-full"
                 data-testid="classify-button"
               >
                 <Sparkles className="w-4 h-4 mr-2" />
-                {classifying ? "Classifying..." : "Get AI Classification"}
+                {classifying ? "Analyzing..." : "Get AI Classification"}
               </Button>
             )}
           </div>
         </div>
         
         {listing.ai_classification && (
-          <Card className="mt-8 border-2" data-testid="ai-classification-card">
+          <Card className="border-2 shadow-lg" data-testid="ai-classification-card">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 font-heading">
+              <CardTitle className="flex items-center gap-2 font-heading text-2xl">
                 <Sparkles className="w-6 h-6 text-accent" />
                 AI Classification Results
               </CardTitle>
+              <CardDescription>Advanced analysis powered by GPT-4o</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <span className="text-sm text-muted-foreground">Category:</span>
-                <p className="font-semibold">{listing.ai_classification.category}</p>
+            <CardContent className="grid md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <div>
+                  <span className="text-sm text-muted-foreground">Detailed Category</span>
+                  <p className="font-bold font-heading text-lg">{listing.ai_classification.detailed_category || listing.ai_classification.category}</p>
+                </div>
+                <div>
+                  <span className="text-sm text-muted-foreground">Recyclability Score</span>
+                  <div className="flex items-center gap-3 mt-1">
+                    <div className="flex-1 h-3 bg-muted rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-chart-1 transition-all duration-500" 
+                        style={{width: `${listing.ai_classification.recyclability_score}%`}}
+                      />
+                    </div>
+                    <span className="font-bold font-heading text-chart-1">{listing.ai_classification.recyclability_score}/100</span>
+                  </div>
+                </div>
+                <div>
+                  <span className="text-sm text-muted-foreground">Environmental Impact</span>
+                  <p className="font-bold font-heading">{listing.ai_classification.co2_saved_per_kg} kg CO2 saved per kg</p>
+                </div>
+                <div>
+                  <span className="text-sm text-muted-foreground">Hazard Level</span>
+                  <Badge variant={listing.ai_classification.hazard_level === "low" ? "default" : listing.ai_classification.hazard_level === "medium" ? "secondary" : "destructive"} className="mt-1">
+                    {listing.ai_classification.hazard_level}
+                  </Badge>
+                </div>
               </div>
-              <div>
-                <span className="text-sm text-muted-foreground">Recyclability Score:</span>
-                <p className="font-semibold text-chart-1">{listing.ai_classification.recyclability_score}/100</p>
-              </div>
-              <div>
-                <span className="text-sm text-muted-foreground">Hazard Level:</span>
-                <Badge variant={listing.ai_classification.hazard_level === "low" ? "default" : "destructive"}>
-                  {listing.ai_classification.hazard_level}
-                </Badge>
-              </div>
-              <div>
-                <span className="text-sm text-muted-foreground">CO2 Saved per kg:</span>
-                <p className="font-semibold">{listing.ai_classification.co2_saved_per_kg} kg</p>
-              </div>
-              <div>
-                <span className="text-sm text-muted-foreground">Potential Uses:</span>
-                <ul className="list-disc list-inside">
-                  {listing.ai_classification.potential_uses?.map((use, idx) => (
-                    <li key={idx}>{use}</li>
-                  ))}
-                </ul>
+              <div className="space-y-4">
+                {listing.ai_classification.market_value_indicator && (
+                  <div>
+                    <span className="text-sm text-muted-foreground">Market Value</span>
+                    <p className="font-bold font-heading capitalize">{listing.ai_classification.market_value_indicator}</p>
+                  </div>
+                )}
+                <div>
+                  <span className="text-sm text-muted-foreground">Potential Uses</span>
+                  <ul className="list-disc list-inside space-y-1 mt-1">
+                    {listing.ai_classification.potential_uses?.map((use, idx) => (
+                      <li key={idx} className="text-sm">{use}</li>
+                    ))}
+                  </ul>
+                </div>
+                {listing.ai_classification.processing_requirements && (
+                  <div>
+                    <span className="text-sm text-muted-foreground">Processing Requirements</span>
+                    <div className="flex flex-wrap gap-2 mt-1">
+                      {listing.ai_classification.processing_requirements.map((req, idx) => (
+                        <Badge key={idx} variant="outline" className="text-xs">{req}</Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -945,92 +1291,186 @@ const ListingDetail = () => {
   );
 };
 
-const ImpactTracker = () => {
-  const [impact, setImpact] = useState(null);
+const Analytics = () => {
+  const [analytics, setAnalytics] = useState(null);
 
   useEffect(() => {
-    fetchImpact();
+    fetchAnalytics();
   }, []);
 
-  const fetchImpact = async () => {
+  const fetchAnalytics = async () => {
     try {
-      const response = await axios.get(`${API}/impact`);
-      setImpact(response.data);
+      const response = await axios.get(`${API}/analytics`);
+      setAnalytics(response.data);
     } catch (error) {
-      console.error("Failed to fetch impact", error);
+      console.error("Failed to fetch analytics", error);
     }
   };
 
-  if (!impact) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  if (!analytics) return <div className="min-h-screen flex items-center justify-center">Loading analytics...</div>;
+
+  const COLORS = ['#1A4A38', '#22C55E', '#D4F860', '#C86A53', '#F4F5F4'];
 
   return (
-    <div className="min-h-screen py-12 px-6">
+    <div className="min-h-screen py-12 px-6 bg-gradient-to-b from-background to-muted/20">
       <div className="max-w-7xl mx-auto">
         <div className="mb-12">
-          <h1 className="text-4xl lg:text-5xl font-black font-heading text-primary mb-4" data-testid="impact-title">Environmental Impact</h1>
-          <p className="text-lg text-muted-foreground">Track the positive impact of our marketplace on the environment</p>
+          <Badge variant="outline" className="mb-4">Advanced Analytics</Badge>
+          <h1 className="text-4xl lg:text-6xl font-black font-heading text-primary mb-4" data-testid="analytics-title">
+            Environmental Impact Dashboard
+          </h1>
+          <p className="text-lg text-muted-foreground max-w-3xl">
+            Track your contribution to sustainability with real-time data and insights
+          </p>
         </div>
         
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-          <Card className="border-2 p-8" data-testid="impact-detail-co2">
-            <Cloud className="w-12 h-12 text-chart-1 mb-4" />
-            <CardTitle className="text-sm font-medium text-muted-foreground mb-2">CO2 Saved</CardTitle>
-            <div className="text-5xl font-black font-heading text-chart-1 mb-2">{impact.co2_saved_kg}</div>
-            <div className="text-muted-foreground">kilograms</div>
+          <Card className="border-2 p-6 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg" data-testid="analytics-co2">
+            <div className="flex items-start justify-between mb-4">
+              <Cloud className="w-10 h-10 text-chart-1" />
+              <Badge variant="outline" className="text-xs">+12%</Badge>
+            </div>
+            <p className="text-sm text-muted-foreground mb-1">CO2 Saved</p>
+            <p className="text-4xl font-black font-heading text-chart-1">{analytics.total_impact.co2_saved_kg}</p>
+            <p className="text-xs text-muted-foreground mt-1">kilograms</p>
           </Card>
           
-          <Card className="border-2 p-8" data-testid="impact-detail-items">
-            <Recycle className="w-12 h-12 text-primary mb-4" />
-            <CardTitle className="text-sm font-medium text-muted-foreground mb-2">Items Recycled</CardTitle>
-            <div className="text-5xl font-black font-heading text-primary mb-2">{impact.items_recycled}</div>
-            <div className="text-muted-foreground">total items</div>
+          <Card className="border-2 p-6 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg" data-testid="analytics-items">
+            <div className="flex items-start justify-between mb-4">
+              <Recycle className="w-10 h-10 text-primary" />
+              <Badge variant="outline" className="text-xs">+8%</Badge>
+            </div>
+            <p className="text-sm text-muted-foreground mb-1">Items Recycled</p>
+            <p className="text-4xl font-black font-heading text-primary">{analytics.total_impact.items_recycled}</p>
+            <p className="text-xs text-muted-foreground mt-1">total items</p>
           </Card>
           
-          <Card className="border-2 p-8" data-testid="impact-detail-waste">
-            <Package className="w-12 h-12 text-accent mb-4" />
-            <CardTitle className="text-sm font-medium text-muted-foreground mb-2">Waste Diverted</CardTitle>
-            <div className="text-5xl font-black font-heading text-accent mb-2">{impact.waste_diverted_kg}</div>
-            <div className="text-muted-foreground">kilograms</div>
+          <Card className="border-2 p-6 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg" data-testid="analytics-waste">
+            <div className="flex items-start justify-between mb-4">
+              <Package className="w-10 h-10 text-accent" />
+              <Badge variant="outline" className="text-xs">+15%</Badge>
+            </div>
+            <p className="text-sm text-muted-foreground mb-1">Waste Diverted</p>
+            <p className="text-4xl font-black font-heading text-accent">{analytics.total_impact.waste_diverted_kg}</p>
+            <p className="text-xs text-muted-foreground mt-1">kilograms</p>
           </Card>
           
-          <Card className="border-2 p-8" data-testid="impact-detail-trees">
-            <TreeDeciduous className="w-12 h-12 text-chart-2 mb-4" />
-            <CardTitle className="text-sm font-medium text-muted-foreground mb-2">Trees Saved</CardTitle>
-            <div className="text-5xl font-black font-heading text-chart-2 mb-2">{impact.trees_saved}</div>
-            <div className="text-muted-foreground">equivalent</div>
+          <Card className="border-2 p-6 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg" data-testid="analytics-trees">
+            <div className="flex items-start justify-between mb-4">
+              <TreeDeciduous className="w-10 h-10 text-chart-2" />
+              <Badge variant="outline" className="text-xs">+8%</Badge>
+            </div>
+            <p className="text-sm text-muted-foreground mb-1">Trees Saved</p>
+            <p className="text-4xl font-black font-heading text-chart-2">{analytics.total_impact.trees_saved}</p>
+            <p className="text-xs text-muted-foreground mt-1">equivalent</p>
           </Card>
         </div>
         
-        <div className="relative rounded-lg overflow-hidden h-96">
-          <img 
-            src="https://images.pexels.com/photos/109391/pexels-photo-109391.jpeg" 
-            alt="Forest landscape" 
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 bg-primary/60 backdrop-blur-sm flex items-center justify-center">
-            <div className="text-center text-white px-6">
-              <h2 className="text-4xl font-black font-heading mb-4">Every Transaction Makes a Difference</h2>
-              <p className="text-lg">Together, we're building a sustainable future through waste reduction and recycling.</p>
-            </div>
-          </div>
+        <div className="grid lg:grid-cols-2 gap-8 mb-8">
+          <Card className="border-2 shadow-lg">
+            <CardHeader>
+              <CardTitle className="font-heading text-2xl">Waste Saved Over Time</CardTitle>
+              <CardDescription>Monthly tracking of environmental impact</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {analytics.monthly_stats.length > 0 ? (
+                <ResponsiveContainer width="100%" height={300}>
+                  <AreaChart data={analytics.monthly_stats}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                    <XAxis dataKey="month" stroke="#6B7280" style={{fontSize: '12px'}} />
+                    <YAxis stroke="#6B7280" style={{fontSize: '12px'}} />
+                    <Tooltip 
+                      contentStyle={{backgroundColor: '#FFFFFF', border: '2px solid #E5E7EB', borderRadius: '8px'}}
+                    />
+                    <Legend />
+                    <Area type="monotone" dataKey="waste_saved" stroke="#1A4A38" fill="#22C55E" fillOpacity={0.6} name="Waste Saved (kg)" />
+                    <Area type="monotone" dataKey="co2_saved" stroke="#C86A53" fill="#D4F860" fillOpacity={0.4} name="CO2 Saved (kg)" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-300 flex items-center justify-center text-muted-foreground">
+                  No data available yet
+                </div>
+              )}
+            </CardContent>
+          </Card>
+          
+          <Card className="border-2 shadow-lg">
+            <CardHeader>
+              <CardTitle className="font-heading text-2xl">Waste Category Breakdown</CardTitle>
+              <CardDescription>Distribution by material type</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {analytics.category_breakdown.length > 0 ? (
+                <ResponsiveContainer width="100%" height={300}>
+                  <PieChart>
+                    <Pie
+                      data={analytics.category_breakdown}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({category, percentage}) => `${category}: ${percentage}%`}
+                      outerRadius={100}
+                      fill="#8884d8"
+                      dataKey="value"
+                    >
+                      {analytics.category_breakdown.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip 
+                      contentStyle={{backgroundColor: '#FFFFFF', border: '2px solid #E5E7EB', borderRadius: '8px'}}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-300 flex items-center justify-center text-muted-foreground">
+                  No data available yet
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
+        
+        <Card className="border-2 shadow-lg bg-gradient-to-br from-primary/5 to-accent/5">
+          <CardContent className="py-12">
+            <div className="text-center max-w-3xl mx-auto">
+              <Leaf className="w-16 h-16 text-primary mx-auto mb-6" />
+              <h2 className="text-3xl font-black font-heading text-primary mb-4">
+                Every Transaction Creates Impact
+              </h2>
+              <p className="text-lg text-muted-foreground mb-6">
+                Your participation in EcoMarket contributes to a circular economy, reduces landfill waste, and helps combat climate change. Together, we're building a sustainable future.
+              </p>
+              <div className="grid grid-cols-3 gap-8 mt-8">
+                <div>
+                  <p className="text-3xl font-black font-heading text-chart-1 mb-1">
+                    {((analytics.total_impact.co2_saved_kg / 1000) * 2.5).toFixed(1)}
+                  </p>
+                  <p className="text-sm text-muted-foreground">Cars off road (equivalent)</p>
+                </div>
+                <div>
+                  <p className="text-3xl font-black font-heading text-primary mb-1">
+                    {(analytics.total_impact.waste_diverted_kg / 50).toFixed(0)}
+                  </p>
+                  <p className="text-sm text-muted-foreground">Landfills avoided</p>
+                </div>
+                <div>
+                  <p className="text-3xl font-black font-heading text-chart-2 mb-1">
+                    {(analytics.total_impact.trees_saved * 1.2).toFixed(0)}
+                  </p>
+                  <p className="text-sm text-muted-foreground">Forests protected (acres)</p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
 };
 
-const ProtectedRoute = ({ children }) => {
-  const { user, loading } = useAuth();
-  
-  if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
-  if (!user) return <Navigate to="/auth" />;
-  
-  return children;
-};
-
-const { useParams } = require("react-router-dom");
-
-function App() {
+export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
@@ -1038,16 +1478,21 @@ function App() {
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/auth" element={<AuthPage />} />
-          <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/marketplace" element={<ProtectedRoute><Marketplace /></ProtectedRoute>} />
           <Route path="/create-listing" element={<ProtectedRoute><CreateListing /></ProtectedRoute>} />
           <Route path="/listing/:id" element={<ProtectedRoute><ListingDetail /></ProtectedRoute>} />
-          <Route path="/impact" element={<ProtectedRoute><ImpactTracker /></ProtectedRoute>} />
+          <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
         </Routes>
+        <AIChatbot />
         <Toaster position="top-center" richColors />
       </BrowserRouter>
     </AuthProvider>
   );
 }
 
-export default App;
+const ProtectedRoute = ({ children }) => {
+  const { user, loading } = useAuth();
+  if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  if (!user) return <Navigate to="/auth" />;
+  return children;
+};

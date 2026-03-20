@@ -18,39 +18,23 @@ from emergentintegrations.llm.chat import LlmChat, UserMessage
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
-# MongoDB connection
 mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
-# Environment variables
 EMERGENT_LLM_KEY = os.environ.get('EMERGENT_LLM_KEY', '')
 JWT_SECRET = os.environ.get('JWT_SECRET', 'default_secret')
 JWT_ALGORITHM = os.environ.get('JWT_ALGORITHM', 'HS256')
 
-# Storage configuration
 STORAGE_URL = "https://integrations.emergentagent.com/objstore/api/v1/storage"
 APP_NAME = "recycle-market"
 storage_key = None
 
-# Create the main app
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
-
-# ============== MODELS ==============
-
-class UserRole:
-    INDUSTRY = "industry"
-    RECYCLER = "recycler"
-    BUYER = "buyer"
-    SELLER = "seller"
 
 class WasteStatus:
     AVAILABLE = "available"
@@ -61,9 +45,9 @@ class UserRegister(BaseModel):
     email: EmailStr
     password: str
     name: str
-    role: str
     company_name: Optional[str] = None
     location: str
+    wallet_address: Optional[str] = None
 
 class UserLogin(BaseModel):
     email: EmailStr
@@ -74,9 +58,9 @@ class User(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     email: str
     name: str
-    role: str
     company_name: Optional[str] = None
     location: str
+    wallet_address: Optional[str] = None
     created_at: str
 
 class WasteListingCreate(BaseModel):
@@ -85,9 +69,16 @@ class WasteListingCreate(BaseModel):
     waste_type: str
     quantity: float
     unit: str
-    price: float
+    price_usd: float
+    price_eth: Optional[float] = None
     location: str
     images: List[str] = []
+    material_composition: Optional[str] = None
+    certifications: Optional[List[str]] = []
+    pickup_available: bool = True
+    delivery_available: bool = False
+    min_order_quantity: Optional[float] = None
+    purity_percentage: Optional[float] = None
 
 class WasteListingUpdate(BaseModel):
     title: Optional[str] = None
@@ -95,10 +86,17 @@ class WasteListingUpdate(BaseModel):
     waste_type: Optional[str] = None
     quantity: Optional[float] = None
     unit: Optional[str] = None
-    price: Optional[float] = None
+    price_usd: Optional[float] = None
+    price_eth: Optional[float] = None
     location: Optional[str] = None
     images: Optional[List[str]] = None
     status: Optional[str] = None
+    material_composition: Optional[str] = None
+    certifications: Optional[List[str]] = None
+    pickup_available: Optional[bool] = None
+    delivery_available: Optional[bool] = None
+    min_order_quantity: Optional[float] = None
+    purity_percentage: Optional[float] = None
 
 class WasteListing(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -108,15 +106,27 @@ class WasteListing(BaseModel):
     waste_type: str
     quantity: float
     unit: str
-    price: float
+    price_usd: float
+    price_eth: Optional[float] = None
     location: str
     images: List[str] = []
     seller_id: str
     seller_name: str
+    seller_wallet: Optional[str] = None
     status: str = WasteStatus.AVAILABLE
     ai_classification: Optional[dict] = None
+    material_composition: Optional[str] = None
+    certifications: Optional[List[str]] = []
+    pickup_available: bool = True
+    delivery_available: bool = False
+    min_order_quantity: Optional[float] = None
+    purity_percentage: Optional[float] = None
     created_at: str
     updated_at: str
+
+class ChatMessage(BaseModel):
+    message: str
+    session_id: Optional[str] = None
 
 class EnvironmentalImpact(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -125,18 +135,18 @@ class EnvironmentalImpact(BaseModel):
     waste_diverted_kg: float
     trees_saved: float
 
-# ============== STORAGE FUNCTIONS ==============
+class AnalyticsData(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    monthly_stats: List[dict]
+    category_breakdown: List[dict]
+    total_impact: EnvironmentalImpact
 
 def init_storage():
     global storage_key
     if storage_key:
         return storage_key
     try:
-        resp = requests.post(
-            f"{STORAGE_URL}/init",
-            json={"emergent_key": EMERGENT_LLM_KEY},
-            timeout=30
-        )
+        resp = requests.post(f"{STORAGE_URL}/init", json={"emergent_key": EMERGENT_LLM_KEY}, timeout=30)
         resp.raise_for_status()
         storage_key = resp.json()["storage_key"]
         logger.info("Storage initialized successfully")
@@ -147,26 +157,15 @@ def init_storage():
 
 def put_object(path: str, data: bytes, content_type: str) -> dict:
     key = init_storage()
-    resp = requests.put(
-        f"{STORAGE_URL}/objects/{path}",
-        headers={"X-Storage-Key": key, "Content-Type": content_type},
-        data=data,
-        timeout=120
-    )
+    resp = requests.put(f"{STORAGE_URL}/objects/{path}", headers={"X-Storage-Key": key, "Content-Type": content_type}, data=data, timeout=120)
     resp.raise_for_status()
     return resp.json()
 
 def get_object(path: str) -> tuple:
     key = init_storage()
-    resp = requests.get(
-        f"{STORAGE_URL}/objects/{path}",
-        headers={"X-Storage-Key": key},
-        timeout=60
-    )
+    resp = requests.get(f"{STORAGE_URL}/objects/{path}", headers={"X-Storage-Key": key}, timeout=60)
     resp.raise_for_status()
     return resp.content, resp.headers.get("Content-Type", "application/octet-stream")
-
-# ============== AUTH FUNCTIONS ==============
 
 def hash_password(password: str) -> str:
     return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
@@ -175,11 +174,7 @@ def verify_password(password: str, hashed: str) -> bool:
     return bcrypt.checkpw(password.encode('utf-8'), hashed.encode('utf-8'))
 
 def create_token(user_id: str, email: str) -> str:
-    payload = {
-        "user_id": user_id,
-        "email": email,
-        "exp": datetime.now(timezone.utc) + timedelta(days=7)
-    }
+    payload = {"user_id": user_id, "email": email, "exp": datetime.now(timezone.utc) + timedelta(days=30)}
     return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
 
 def verify_token(token: str) -> dict:
@@ -201,14 +196,12 @@ async def get_current_user(authorization: str = Header(None)):
         raise HTTPException(status_code=401, detail="User not found")
     return User(**user)
 
-# ============== AI CLASSIFICATION ==============
-
-async def classify_waste_with_ai(title: str, description: str, waste_type: str) -> dict:
+async def classify_waste_with_ai(title: str, description: str, waste_type: str, material_composition: str = None) -> dict:
     try:
         chat = LlmChat(
             api_key=EMERGENT_LLM_KEY,
             session_id=str(uuid.uuid4()),
-            system_message="You are an expert waste classification assistant. Analyze waste materials and provide detailed classification."
+            system_message="You are an expert waste classification and environmental impact analyst."
         ).with_model("openai", "gpt-4o")
         
         prompt = f"""Analyze this waste material and provide a JSON response:
@@ -216,33 +209,33 @@ async def classify_waste_with_ai(title: str, description: str, waste_type: str) 
 Title: {title}
 Description: {description}
 Type: {waste_type}
+Material Composition: {material_composition or 'Not specified'}
 
 Provide:
-1. Detailed category (e.g., 'Ferrous Metal', 'HDPE Plastic', 'Agricultural Residue')
-2. Recyclability score (0-100)
-3. Potential uses (list)
-4. Environmental impact if recycled (CO2 saved per kg)
-5. Hazard level (low/medium/high)
+1. detailed_category: Specific classification (e.g., 'Ferrous Steel Scrap', 'HDPE Plastic Grade A')
+2. recyclability_score: 0-100
+3. potential_uses: array of strings
+4. co2_saved_per_kg: environmental impact if recycled
+5. hazard_level: low/medium/high
+6. market_value_indicator: low/medium/high/premium
+7. processing_requirements: array of strings
 
 Respond ONLY with valid JSON."""
         
-        user_message = UserMessage(text=prompt)
-        response = await chat.send_message(user_message)
-        
+        response = await chat.send_message(UserMessage(text=prompt))
         import json
-        classification = json.loads(response)
-        return classification
+        return json.loads(response)
     except Exception as e:
         logger.error(f"AI classification error: {e}")
         return {
-            "category": waste_type,
+            "detailed_category": waste_type,
             "recyclability_score": 50,
             "potential_uses": ["To be determined"],
             "co2_saved_per_kg": 0.5,
-            "hazard_level": "low"
+            "hazard_level": "low",
+            "market_value_indicator": "medium",
+            "processing_requirements": ["Basic sorting"]
         }
-
-# ============== ROUTES ==============
 
 @api_router.post("/auth/register")
 async def register(user_data: UserRegister):
@@ -255,9 +248,9 @@ async def register(user_data: UserRegister):
         "email": user_data.email,
         "password_hash": hash_password(user_data.password),
         "name": user_data.name,
-        "role": user_data.role,
         "company_name": user_data.company_name,
         "location": user_data.location,
+        "wallet_address": user_data.wallet_address,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     
@@ -270,9 +263,9 @@ async def register(user_data: UserRegister):
             id=user_dict["id"],
             email=user_dict["email"],
             name=user_dict["name"],
-            role=user_dict["role"],
             company_name=user_dict["company_name"],
             location=user_dict["location"],
+            wallet_address=user_dict.get("wallet_address"),
             created_at=user_dict["created_at"]
         )
     }
@@ -291,9 +284,9 @@ async def login(credentials: UserLogin):
             id=user["id"],
             email=user["email"],
             name=user["name"],
-            role=user["role"],
             company_name=user.get("company_name"),
             location=user["location"],
+            wallet_address=user.get("wallet_address"),
             created_at=user["created_at"]
         )
     }
@@ -301,6 +294,11 @@ async def login(credentials: UserLogin):
 @api_router.get("/auth/me", response_model=User)
 async def get_me(current_user: User = Depends(get_current_user)):
     return current_user
+
+@api_router.put("/auth/wallet")
+async def update_wallet(wallet_address: str, current_user: User = Depends(get_current_user)):
+    await db.users.update_one({"id": current_user.id}, {"$set": {"wallet_address": wallet_address}})
+    return {"message": "Wallet updated successfully"}
 
 @api_router.post("/upload")
 async def upload_file(file: UploadFile = File(...), current_user: User = Depends(get_current_user)):
@@ -322,7 +320,6 @@ async def upload_file(file: UploadFile = File(...), current_user: User = Depends
     }
     
     await db.files.insert_one(file_doc)
-    
     return {"path": result["path"], "size": result["size"]}
 
 @api_router.get("/files/{path:path}")
@@ -350,6 +347,7 @@ async def create_listing(listing_data: WasteListingCreate, current_user: User = 
         **listing_data.model_dump(),
         "seller_id": current_user.id,
         "seller_name": current_user.name,
+        "seller_wallet": current_user.wallet_address,
         "status": WasteStatus.AVAILABLE,
         "ai_classification": None,
         "created_at": now,
@@ -399,7 +397,6 @@ async def update_listing(listing_id: str, update_data: WasteListingUpdate, curre
     update_dict["updated_at"] = datetime.now(timezone.utc).isoformat()
     
     await db.listings.update_one({"id": listing_id}, {"$set": update_dict})
-    
     updated = await db.listings.find_one({"id": listing_id}, {"_id": 0})
     return WasteListing(**updated)
 
@@ -423,7 +420,8 @@ async def classify_listing(listing_id: str, current_user: User = Depends(get_cur
     classification = await classify_waste_with_ai(
         listing["title"],
         listing["description"],
-        listing["waste_type"]
+        listing["waste_type"],
+        listing.get("material_composition")
     )
     
     await db.listings.update_one(
@@ -451,7 +449,71 @@ async def get_impact():
         trees_saved=round(trees_saved, 2)
     )
 
-# Include router
+@api_router.get("/analytics", response_model=AnalyticsData)
+async def get_analytics():
+    from datetime import datetime as dt
+    from collections import defaultdict
+    
+    listings = await db.listings.find({"status": WasteStatus.SOLD}, {"_id": 0}).to_list(10000)
+    
+    monthly_data = defaultdict(lambda: {"month": "", "waste_saved": 0, "co2_saved": 0, "items": 0})
+    category_data = defaultdict(lambda: {"category": "", "value": 0, "percentage": 0})
+    
+    total_quantity = 0
+    total_items = len(listings)
+    
+    for listing in listings:
+        created = listing.get("created_at", "")
+        if created:
+            month_key = created[:7]
+            quantity = listing.get("quantity", 0)
+            monthly_data[month_key]["month"] = month_key
+            monthly_data[month_key]["waste_saved"] += quantity
+            monthly_data[month_key]["co2_saved"] += quantity * 0.5
+            monthly_data[month_key]["items"] += 1
+            
+            waste_type = listing.get("waste_type", "other")
+            category_data[waste_type]["category"] = waste_type
+            category_data[waste_type]["value"] += quantity
+            
+            total_quantity += quantity
+    
+    for cat in category_data.values():
+        cat["percentage"] = round((cat["value"] / total_quantity * 100) if total_quantity > 0 else 0, 1)
+    
+    co2_saved = total_quantity * 0.5
+    trees_saved = co2_saved / 21
+    
+    return AnalyticsData(
+        monthly_stats=sorted(list(monthly_data.values()), key=lambda x: x["month"]),
+        category_breakdown=list(category_data.values()),
+        total_impact=EnvironmentalImpact(
+            co2_saved_kg=round(co2_saved, 2),
+            items_recycled=total_items,
+            waste_diverted_kg=round(total_quantity, 2),
+            trees_saved=round(trees_saved, 2)
+        )
+    )
+
+@api_router.post("/chat")
+async def ai_chat(chat_data: ChatMessage, current_user: User = Depends(get_current_user)):
+    try:
+        session_id = chat_data.session_id or str(uuid.uuid4())
+        
+        chat = LlmChat(
+            api_key=EMERGENT_LLM_KEY,
+            session_id=session_id,
+            system_message="You are a helpful 24/7 AI assistant for EcoMarket, a sustainable waste trading platform. Help users with waste classification, pricing guidance, environmental impact, DeFi/crypto payments, and platform navigation. Be professional, eco-conscious, and supportive."
+        ).with_model("openai", "gpt-4o")
+        
+        user_message = UserMessage(text=chat_data.message)
+        response = await chat.send_message(user_message)
+        
+        return {"response": response, "session_id": session_id}
+    except Exception as e:
+        logger.error(f"Chat error: {e}")
+        return {"response": "I'm here to help! Could you please rephrase your question?", "session_id": chat_data.session_id}
+
 app.include_router(api_router)
 
 app.add_middleware(
