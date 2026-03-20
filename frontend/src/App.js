@@ -135,46 +135,66 @@ const AIChatbot = () => {
     <>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed bottom-6 right-6 z-50 w-16 h-16 bg-primary hover:bg-primary/90 text-white rounded-full shadow-lg transition-all duration-200 hover:scale-110 flex items-center justify-center"
+        className="fixed bottom-6 right-6 z-50 w-16 h-16 bg-gradient-to-br from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-full shadow-2xl transition-all duration-300 hover:scale-110 flex items-center justify-center ai-glow animate-pulse-glow"
         data-testid="ai-chatbot-button"
       >
-        {isOpen ? <X className="w-6 h-6" /> : <MessageCircle className="w-6 h-6" />}
+        {isOpen ? <X className="w-7 h-7" /> : <MessageCircle className="w-7 h-7" />}
       </button>
 
       {isOpen && (
-        <div className="fixed bottom-24 right-6 z-50 w-96 h-[500px] bg-white rounded-lg shadow-2xl border-2 border-border flex flex-col" data-testid="ai-chatbot-window">
-          <div className="bg-primary text-white p-4 rounded-t-lg">
-            <h3 className="font-bold font-heading">24/7 AI Assistant</h3>
-            <p className="text-xs opacity-90">Ask me anything about EcoMarket</p>
+        <div className="fixed bottom-24 right-6 z-50 w-96 h-[500px] glass-effect rounded-2xl shadow-2xl border border-border/50 flex flex-col overflow-hidden" data-testid="ai-chatbot-window">
+          <div className="bg-gradient-to-r from-purple-600 to-pink-600 text-white p-4 rounded-t-2xl">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 animate-pulse" />
+              <div>
+                <h3 className="font-bold font-heading text-lg">AI Assistant</h3>
+                <p className="text-xs opacity-90">24/7 Support • Powered by GPT-4o</p>
+              </div>
+            </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-background/95">
             {messages.map((msg, idx) => (
               <div key={idx} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-                <div className={`max-w-[80%] p-3 rounded-lg ${msg.role === "user" ? "bg-primary text-white" : "bg-muted"}`}>
-                  <p className="text-sm">{msg.content}</p>
+                <div className={`max-w-[80%] p-3 rounded-2xl ${
+                  msg.role === "user" 
+                    ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white" 
+                    : "glass-effect border border-border/50"
+                }`}>
+                  <p className="text-sm leading-relaxed">{msg.content}</p>
                 </div>
               </div>
             ))}
             {isLoading && (
               <div className="flex justify-start">
-                <div className="bg-muted p-3 rounded-lg">
-                  <p className="text-sm">Typing...</p>
+                <div className="glass-effect p-3 rounded-2xl border border-border/50">
+                  <p className="text-sm flex items-center gap-2">
+                    <span className="animate-pulse">●</span>
+                    <span className="animate-pulse" style={{animationDelay: '0.2s'}}>●</span>
+                    <span className="animate-pulse" style={{animationDelay: '0.4s'}}>●</span>
+                    AI is thinking...
+                  </p>
                 </div>
               </div>
             )}
           </div>
 
-          <div className="p-4 border-t">
+          <div className="p-4 border-t border-border/50 bg-background/95">
             <div className="flex gap-2">
               <Input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyPress={(e) => e.key === "Enter" && sendMessage()}
-                placeholder="Type your message..."
+                placeholder="Ask anything..."
+                className="flex-1 glass-effect border-border/50"
                 data-testid="ai-chat-input"
               />
-              <Button onClick={sendMessage} size="icon" data-testid="ai-chat-send">
+              <Button 
+                onClick={sendMessage} 
+                size="icon" 
+                className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+                data-testid="ai-chat-send"
+              >
                 <Send className="w-4 h-4" />
               </Button>
             </div>
@@ -364,48 +384,164 @@ const LandingPage = () => {
         </div>
       </section>
 
+      <section className="py-20 relative">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="text-center mb-16">
+            <Badge variant="outline" className="mb-4 border-accent/50 bg-accent/5">
+              <BarChart3 className="w-4 h-4 mr-2 inline" />
+              Market Intelligence
+            </Badge>
+            <h2 className="text-4xl lg:text-6xl font-black font-heading mb-4 gradient-text">Global Waste Market Opportunity</h2>
+            <p className="text-foreground/70 text-lg max-w-3xl mx-auto">The industrial waste recycling market is experiencing exponential growth</p>
+          </div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+            <div className="card-3d glass-effect rounded-2xl p-8 text-center group">
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center ai-glow">
+                <TrendingUp className="w-8 h-8 text-white" />
+              </div>
+              <h3 className="text-4xl font-black font-heading gradient-text mb-2">$410B</h3>
+              <p className="text-foreground/60">Global Market Size</p>
+              <p className="text-xs text-foreground/40 mt-2">2024 Valuation</p>
+            </div>
+
+            <div className="card-3d glass-effect rounded-2xl p-8 text-center group">
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-blue-600 to-cyan-600 flex items-center justify-center ai-glow">
+                <Factory className="w-8 h-8 text-white" />
+              </div>
+              <h3 className="text-4xl font-black font-heading gradient-text mb-2">7.2%</h3>
+              <p className="text-foreground/60">Annual Growth Rate</p>
+              <p className="text-xs text-foreground/40 mt-2">CAGR 2024-2030</p>
+            </div>
+
+            <div className="card-3d glass-effect rounded-2xl p-8 text-center group">
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-green-600 to-emerald-600 flex items-center justify-center ai-glow">
+                <Leaf className="w-8 h-8 text-white" />
+              </div>
+              <h3 className="text-4xl font-black font-heading gradient-text mb-2">2B+</h3>
+              <p className="text-foreground/60">Tons Recycled</p>
+              <p className="text-xs text-foreground/40 mt-2">Annually Worldwide</p>
+            </div>
+
+            <div className="card-3d glass-effect rounded-2xl p-8 text-center group">
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-pink-600 to-rose-600 flex items-center justify-center ai-glow">
+                <DollarSign className="w-8 h-8 text-white" />
+              </div>
+              <h3 className="text-4xl font-black font-heading gradient-text mb-2">$285/ton</h3>
+              <p className="text-foreground/60">Average Price</p>
+              <p className="text-xs text-foreground/40 mt-2">Industrial Waste</p>
+            </div>
+          </div>
+
+          <div className="glass-effect rounded-2xl p-8 md:p-12 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-purple-600/10 rounded-full blur-3xl" />
+            <div className="relative z-10">
+              <div className="grid md:grid-cols-3 gap-8 mb-8">
+                <div className="text-center">
+                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 mb-4">
+                    <Package className="w-6 h-6 text-primary" />
+                  </div>
+                  <h4 className="text-3xl font-black font-heading mb-2">Metal Scrap</h4>
+                  <p className="text-foreground/60 mb-3">$180B Market</p>
+                  <div className="h-2 bg-background rounded-full overflow-hidden">
+                    <div className="h-full bg-gradient-to-r from-purple-600 to-pink-600" style={{width: '44%'}} />
+                  </div>
+                  <p className="text-xs text-foreground/50 mt-2">44% of total market</p>
+                </div>
+
+                <div className="text-center">
+                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-secondary/10 mb-4">
+                    <Recycle className="w-6 h-6 text-secondary" />
+                  </div>
+                  <h4 className="text-3xl font-black font-heading mb-2">Plastic Waste</h4>
+                  <p className="text-foreground/60 mb-3">$95B Market</p>
+                  <div className="h-2 bg-background rounded-full overflow-hidden">
+                    <div className="h-full bg-gradient-to-r from-blue-600 to-cyan-600" style={{width: '23%'}} />
+                  </div>
+                  <p className="text-xs text-foreground/50 mt-2">23% of total market</p>
+                </div>
+
+                <div className="text-center">
+                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-accent/10 mb-4">
+                    <Leaf className="w-6 h-6 text-accent" />
+                  </div>
+                  <h4 className="text-3xl font-black font-heading mb-2">E-Waste</h4>
+                  <p className="text-foreground/60 mb-3">$65B Market</p>
+                  <div className="h-2 bg-background rounded-full overflow-hidden">
+                    <div className="h-full bg-gradient-to-r from-pink-600 to-purple-600" style={{width: '16%'}} />
+                  </div>
+                  <p className="text-xs text-foreground/50 mt-2">16% of total market</p>
+                </div>
+              </div>
+
+              <div className="text-center pt-6 border-t border-border/50">
+                <p className="text-foreground/80 text-lg mb-4">
+                  <span className="font-bold text-primary">EcoMarket</span> is positioned at the intersection of this massive opportunity with AI-powered efficiency and DeFi innovation
+                </p>
+                <Button 
+                  onClick={() => navigate("/marketplace")} 
+                  size="lg"
+                  className="rounded-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 transition-all duration-300 hover:scale-110 ai-glow font-bold"
+                >
+                  Explore Opportunities
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section className="py-20 bg-muted/30">
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div>
-              <Badge variant="outline" className="mb-4">DeFi Integration</Badge>
-              <h2 className="text-4xl lg:text-5xl font-black font-heading mb-6 text-primary">Decentralized Finance Meets Sustainability</h2>
+              <Badge variant="outline" className="mb-4 border-primary/50 bg-primary/5">DeFi Integration</Badge>
+              <h2 className="text-4xl lg:text-5xl font-black font-heading mb-6 gradient-text">Decentralized Finance Meets Sustainability</h2>
               <div className="space-y-4">
                 <div className="flex gap-4">
-                  <Wallet className="w-8 h-8 text-chart-2 flex-shrink-0" />
+                  <Wallet className="w-8 h-8 text-secondary flex-shrink-0" />
                   <div>
                     <h3 className="text-xl font-bold font-heading mb-2">Crypto Payments</h3>
-                    <p className="text-muted-foreground">Pay with ETH or traditional USD. Connect your MetaMask wallet for seamless transactions.</p>
+                    <p className="text-foreground/70">Pay with ETH or traditional USD. Connect your MetaMask wallet for seamless transactions.</p>
                   </div>
                 </div>
                 <div className="flex gap-4">
                   <Shield className="w-8 h-8 text-primary flex-shrink-0" />
                   <div>
                     <h3 className="text-xl font-bold font-heading mb-2">Secure & Transparent</h3>
-                    <p className="text-muted-foreground">All transactions are secure with blockchain verification and smart contract protection.</p>
+                    <p className="text-foreground/70">All transactions are secure with blockchain verification and smart contract protection.</p>
                   </div>
                 </div>
                 <div className="flex gap-4">
                   <Sparkles className="w-8 h-8 text-accent flex-shrink-0" />
                   <div>
                     <h3 className="text-xl font-bold font-heading mb-2">AI-Powered</h3>
-                    <p className="text-muted-foreground">Get instant waste classification, market pricing, and 24/7 AI assistant support.</p>
+                    <p className="text-foreground/70">Get instant waste classification, market pricing, and 24/7 AI assistant support.</p>
                   </div>
                 </div>
               </div>
             </div>
             <div className="relative">
-              <img 
-                src="https://images.pexels.com/photos/36397860/pexels-photo-36397860.jpeg" 
-                alt="Industrial recycling" 
-                className="rounded-lg shadow-2xl"
-              />
-              <div className="absolute -bottom-6 -left-6 bg-white p-6 rounded-lg shadow-xl border-2">
-                <div className="flex items-center gap-3">
-                  <CheckCircle2 className="w-8 h-8 text-chart-1" />
+              <div className="card-3d glass-effect rounded-2xl p-8 ai-glow">
+                <div className="flex items-center gap-3 mb-6">
+                  <CheckCircle2 className="w-10 h-10 text-chart-1" />
                   <div>
-                    <p className="font-bold font-heading">100% Verified</p>
-                    <p className="text-sm text-muted-foreground">All listings AI-validated</p>
+                    <p className="font-black font-heading text-2xl">100% Verified</p>
+                    <p className="text-sm text-foreground/60">All listings AI-validated</p>
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-3 glass-effect rounded-lg">
+                    <span className="text-sm text-foreground/70">Metal Scrap</span>
+                    <Badge className="bg-gradient-to-r from-green-600 to-emerald-600">+12%</Badge>
+                  </div>
+                  <div className="flex items-center justify-between p-3 glass-effect rounded-lg">
+                    <span className="text-sm text-foreground/70">Plastic Waste</span>
+                    <Badge className="bg-gradient-to-r from-blue-600 to-cyan-600">+8%</Badge>
+                  </div>
+                  <div className="flex items-center justify-between p-3 glass-effect rounded-lg">
+                    <span className="text-sm text-foreground/70">E-Waste</span>
+                    <Badge className="bg-gradient-to-r from-purple-600 to-pink-600">+15%</Badge>
                   </div>
                 </div>
               </div>
